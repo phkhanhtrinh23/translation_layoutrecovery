@@ -1,0 +1,10 @@
+.DS_Store
+*.pyc
+__pycache__
+
+*.pdf
+
+*.otf
+*.ttf
+
+__init__.py
