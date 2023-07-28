@@ -17,6 +17,63 @@ from pydantic import BaseModel, Field
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, T5ForConditionalGeneration, T5Tokenizer, MarianMTModel, MarianTokenizer
 from utils import fw_fill
+import torchvision
+from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
+from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
+from torchvision.transforms import transforms
+import torch
+import random
+import cv2
+import os
+
+seed = 1234
+random.seed(seed)
+torch.manual_seed(seed)
+torch.cuda.manual_seed_all(seed)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+
+# CATEGORIES2LABELS = {
+#     0: "bg",
+#     1: "text",
+#     2: "title",
+#     3: "list",
+#     4: "table",
+#     5: "figure"
+# }
+# SAVE_PATH = "output/"
+# MODEL_PATH = "model_196000.pth"
+# def get_instance_segmentation_model(num_classes):
+#     model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True)
+#     in_features = model.roi_heads.box_predictor.cls_score.in_features
+#     model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
+#     in_features_mask = model.roi_heads.mask_predictor.conv5_mask.in_channels
+#     hidden_layer = 256
+
+#     model.roi_heads.mask_predictor = MaskRCNNPredictor(
+#         in_features_mask,
+#         hidden_layer,
+#         num_classes
+#     )
+#     return model
+
+# num_classes = 6
+# pub_model = get_instance_segmentation_model(num_classes)
+
+# if os.path.exists(MODEL_PATH):
+#     checkpoint_path = MODEL_PATH
+# else:
+#     raise Exception("Model weights not found.")
+
+# assert os.path.exists(checkpoint_path)
+# checkpoint = torch.load(checkpoint_path, map_location='cpu')
+# pub_model.load_state_dict(checkpoint['model'])
+# pub_model.eval()
+
+# transform = transforms.Compose([
+#     transforms.ToPILImage(),
+#     transforms.ToTensor()
+# ])
 
 class InputPdf(BaseModel):
     """Input PDF file."""
@@ -173,36 +230,32 @@ class TranslateApi:
         Called in the constructor.
         Load the layout model, OCR model, translation model and font.
         """
+#         self.font = ImageFont.truetype(
+#             "/workspace/pdf-translator/Source Han Serif CN Light.otf",
+#             size=self.FONT_SIZE,
+#         )
+        self.font = ImageFont.truetype(
+            "/workspace/pdf-translator/AlegreyaSans-Regular.otf",
+            size=self.FONT_SIZE,
+        )
+#         self.font = ImageFont.load_default()
 
         self.layout_model = PPStructure(table=False, ocr=False, lang="en")
         self.ocr_model = PaddleOCR(ocr=True, lang="en", ocr_version="PP-OCRv3")
-
-        ##### Vietnamese #####
-        self.font = ImageFont.truetype(
-            "Source Han Serif CN Light.otf",
-            size=self.FONT_SIZE,
-        )
+#         self.translate_model = MarianMTModel.from_pretrained("staka/fugumt-en-ja").to(
+#             "cuda"
+#         )
+#         self.translate_tokenizer = MarianTokenizer.from_pretrained("staka/fugumt-en-ja")
 
         self.translate_model = AutoModelForSeq2SeqLM.from_pretrained("VietAI/envit5-translation").to(
             "cuda"
         )
         self.translate_tokenizer = AutoTokenizer.from_pretrained("VietAI/envit5-translation")
         
-        # self.translate_model = T5ForConditionalGeneration.from_pretrained("NlpHUST/t5-en-vi-small").to(
-        #     "cuda"
-        # )
-        # self.translate_tokenizer = T5Tokenizer.from_pretrained("NlpHUST/t5-en-vi-small")
-
-        ##### Japanese #####
-        # self.font = ImageFont.truetype(
-        #     "AlegreyaSans-Regular.otf",
-        #     size=self.FONT_SIZE,
-        # )
-        
-        # self.translate_model = MarianMTModel.from_pretrained("staka/fugumt-en-ja").to(
-        #     "cuda"
-        # )
-        # self.translate_tokenizer = MarianTokenizer.from_pretrained("staka/fugumt-en-ja")
+#         self.translate_model = T5ForConditionalGeneration.from_pretrained("NlpHUST/t5-en-vi-small").to(
+#             "cuda"
+#         )
+#         self.translate_tokenizer = T5Tokenizer.from_pretrained("NlpHUST/t5-en-vi-small")
 
     def __translate_one_page(
         self,
@@ -231,26 +284,45 @@ class TranslateApi:
         """
         img = np.array(image, dtype=np.uint8)
         original_img = copy.deepcopy(img)
+#         rat = 1000 / img.shape[0]
+        
+#         new_image = cv2.resize(img, None, fx=rat, fy=rat)
+#         new_image = transform(new_image)
+#         with torch.no_grad():
+#             prediction = pub_model([new_image])
+        
+#         for pred in prediction:
+#             for idx, mask in enumerate(pred['masks']):
+#                 if pred['scores'][idx].item() < 0.7:
+#                     continue
+
+#                 m = mask[0].mul(255).byte().cpu().numpy()
+#                 box = list(map(int, pred["boxes"][idx].tolist()))
+#                 label = CATEGORIES2LABELS[pred["labels"][idx].item()]
+#                 print("box: {}, label: {}".format(box, label))
+    
         result = self.layout_model(img)
+#         print("result:\n", result)
+        
         for line in result:
-            if not line["type"] == "title":
+            if line["type"] == "text":
                 ocr_results = list(map(lambda x: x[0], self.ocr_model(line["img"])[1]))
 
                 if len(ocr_results) > 1:
                     text = " ".join(ocr_results)
                     text = re.sub(r"\n|\t|\[|\]|\/|\|", " ", text)
                     translated_text = self.__translate(text)
-                    # translated_text = re.sub(r"\n|\t|\[|\]|\/|\|", " ", translated_text)
+                    translated_text = re.sub(r"\n|\t|\[|\]|\/|\|", " ", translated_text)
 
-                    ## if almost all characters in translated text are not japanese characters, skip
-                    # if len(
-                    #     re.findall(
-                    #         r"[^\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\u3400-\u4DBF]",
-                    #         translated_text,
-                    #     )
-                    # ) > 0.8 * len(translated_text):
-                    #     print("skipped")
-                    #     continue
+                    # if almost all characters in translated text are not japanese characters, skip
+#                     if len(
+#                         re.findall(
+#                             r"[^\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\u3400-\u4DBF]",
+#                             translated_text,
+#                         )
+#                     ) > 0.8 * len(translated_text):
+#                         print("skipped")
+#                         continue
 
                     # if text is too short, skip
                     if len(translated_text) < 20:
@@ -261,25 +333,31 @@ class TranslateApi:
                     translated_text = translated_text.replace("vi: ", "")
                     translated_text = translated_text.replace("vi ", "")
                     translated_text = translated_text.strip()
-                    print("REPETITION:",  self._repeated_substring(translated_text))
-
-                    if self._repeated_substring(translated_text):
-                        print("REPETITION Detected!")
-                        processed_text = fw_fill(
-                            text,
-                            width=int(
-                                (line["bbox"][2] - line["bbox"][0]) / (self.FONT_SIZE / 2)
-                            )
-                            - 1,
+#                     print("CHECK REPETITION:",  self._repeated_substring(translated_text))
+#                     if self._repeated_substring(translated_text):
+#                         print("REPEATED TEXT Detected!")
+#                         processed_text = fw_fill(
+#                             text,
+#                             width=int(
+#                                 (line["bbox"][2] - line["bbox"][0]) / (self.FONT_SIZE / 2)
+#                             )
+#                             - 1,
+#                         )
+#                     else:
+#                         processed_text = fw_fill(
+#                             translated_text,
+#                             width=int(
+#                                 (line["bbox"][2] - line["bbox"][0]) / (self.FONT_SIZE / 2)
+#                             )
+#                             - 1,
+#                         )
+                    processed_text = fw_fill(
+                        translated_text,
+                        width=int(
+                            (line["bbox"][2] - line["bbox"][0]) / (self.FONT_SIZE / 2)
                         )
-                    else:
-                        processed_text = fw_fill(
-                            translated_text,
-                            width=int(
-                                (line["bbox"][2] - line["bbox"][0]) / (self.FONT_SIZE / 2)
-                            )
-                            - 1,
-                        )
+                        - 1,
+                    )
                     print("Processed_text:\n", processed_text)
 
                     new_block = Image.new(
@@ -338,8 +416,8 @@ class TranslateApi:
             res = self.translate_tokenizer.decode(outputs[0], skip_special_tokens=True)
 
             # skip weird translations
-            if res.startswith("「この版"):
-                continue
+#             if res.startswith("「この版"):
+#                 continue
 
             translated_texts.append(res)
         print("Translation:\n", translated_texts)
