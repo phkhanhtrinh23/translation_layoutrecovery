@@ -4,7 +4,7 @@ __pycache__
 
 *.pdf
 
-*.otf
+# *.otf
 *.ttf
-
-__init__.py
+*.png
+*.pth

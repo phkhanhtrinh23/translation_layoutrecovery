@@ -129,11 +129,11 @@ class TextWrapper(textwrap.TextWrapper):
             cur_line.append(reversed_chunks.pop())
 
 
-def fw_wrap(text, width=MAXWIDTH, **kwargs):
+def fw_wrap_ja(text, width=MAXWIDTH, **kwargs):
     w = TextWrapper(width=width, **kwargs)
     return w.wrap(text)
 
 
-def fw_fill(text, width=MAXWIDTH, **kwargs):
-    w = fw_wrap(text=text, width=width, **kwargs)
+def fw_fill_ja(text, width=MAXWIDTH, **kwargs):
+    w = fw_wrap_ja(text=text, width=width, **kwargs)
     return "\n".join(w)
