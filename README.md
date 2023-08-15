@@ -5,13 +5,14 @@
 This is an implementation of Translation with Layout Recovery.\
 
 ## Main Structure Of File
-   translation_layoutrecovery
-   ├── Frontend/
-   ├── Backend/
-   ├── Model/
-   ├── request.py
-   ├── requirements.txt
-   └── README.md
+
+ * translation_layoutrecovery
+   * Frontend/
+   * Backend/
+   * Model/
+   * request.py
+   * requirements.txt
+   * README.md
 
 ## Installation
 
