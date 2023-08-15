@@ -53,6 +53,19 @@ http://127.0.0.1:8000/getuser [POST]
     }
 }
 
+http://127.0.0.1:8000/getprofile [POST]
+{
+    "profile_id": 1
+}
+{
+    "status": "Got profile data successfully!",
+    "data": {
+        "full_name": "Peter Nguyen",
+        "bio": "",
+        "avatar": "Avatar/avatar.png"
+    }
+}
+
 http://127.0.0.1:8000/updateprofile [POST]
 {
     "user_id": 1,
