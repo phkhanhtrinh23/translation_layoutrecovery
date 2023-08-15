@@ -6,5 +6,5 @@ __pycache__
 
 # *.otf
 *.ttf
-*.png
+# *.png
 *.pth
