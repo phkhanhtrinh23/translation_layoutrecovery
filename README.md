@@ -2,7 +2,7 @@
 
 ## About The Project
 
-This is an implementation of Translation with Layout Recovery.\
+This is an implementation of Translation with Layout Recovery.
 
 ## Main Structure
 
