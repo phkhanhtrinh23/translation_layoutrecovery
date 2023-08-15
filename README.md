@@ -2,7 +2,16 @@
 
 ## About The Project
 
-This is an implementation of Translation with Layout Recovery.
+This is an implementation of Translation with Layout Recovery.\
+
+## Main Structure Of File
+   translation_layoutrecovery
+   ├── Frontend/
+   ├── Backend/
+   ├── Model/
+   ├── request.py
+   ├── requirements.txt
+   └── README.md
 
 ## Installation
 
@@ -14,13 +23,15 @@ This is an implementation of Translation with Layout Recovery.
 
 2. Use any code editor to open the folder **translation_layoutrecovery**.
 
-3. Create conda virtual environment: `conda create -n translation python=3.9`
+3. Download the [pre-trained model](https://drive.google.com/file/d/1Jx2m_2I1d9PYzFRQ4gl82xQa-G7Vsnsl/view?usp=sharing) of PubLayNet.
 
-4. Install the requirements: `pip install -r requirements.txt`.
+4. Create conda virtual environment: `conda create -n translation python=3.9`
 
-5. Run the Back-end API: `python main.py`.
+5. Install the requirements: `pip install -r requirements.txt`.
 
-6. Send the request for translation: `python request.py`.
+6. Run the Back-end API: `python main.py`.
+
+7. Send the request for translation: `python request.py`.
 
 You can send a .pdf file or a directory containing the .pdf files. The translated .pdf files will be saved in the `/outputs` directory.
 
