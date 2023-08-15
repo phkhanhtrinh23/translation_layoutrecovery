@@ -4,7 +4,7 @@
 
 This is an implementation of Translation with Layout Recovery.\
 
-## Main Structure Of File
+## Main Structure
 
  * translation_layoutrecovery
    * Frontend/
