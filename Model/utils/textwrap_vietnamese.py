@@ -5,17 +5,17 @@ import textwrap
 import unicodedata
 from itertools import groupby
 
-MAXWIDTH = 90
+MAXWIDTH = 70
 
 # copy from docutils
-east_asian_widths = {
-    "W": 2,  # Wide
-    "F": 2,  # Full-width (wide)
-    "Na": 1,  # Narrow
-    "H": 1,  # Half-width (narrow)
-    "N": 1,  # Neutral (not East Asian, treated as narrow)
-    "A": 1,
-}  # Ambiguous (s/b wide in East Asian context,
+# east_asian_widths = {
+#     "W": 2,  # Wide
+#     "F": 2,  # Full-width (wide)
+#     "Na": 1,  # Narrow
+#     "H": 1,  # Half-width (narrow)
+#     "N": 1,  # Neutral (not East Asian, treated as narrow)
+#     "A": 1,
+# }  # Ambiguous (s/b wide in East Asian context,
 # narrow otherwise, but that doesn't work)
 
 # copy from docutils
@@ -27,10 +27,12 @@ def column_width(text):
     if isinstance(text, str) and sys.version_info < (3, 0):
         return len(text)
     combining_correction = sum([-1 for c in text if unicodedata.combining(c)])
-    try:
-        width = sum([east_asian_widths[unicodedata.east_asian_width(c)] for c in text])
-    except AttributeError:  # east_asian_width() New in version 2.4.
-        width = len(text)
+    # print("correction:", combining_correction)
+    # try:
+    #     width = sum([east_asian_widths[unicodedata.east_asian_width(c)] for c in text])
+    # except AttributeError:  # east_asian_width() New in version 2.4.
+    #     width = len(text)
+    width = len(text)
     return width + combining_correction
 
 
@@ -115,7 +117,8 @@ class TextWrapper(textwrap.TextWrapper):
     def _handle_long_word(self, reversed_chunks, cur_line, cur_len, width):
         """_handle_long_word(chunks : [string],
                              cur_line : [string],
-                             cur_len : int, width : int)
+                             cur_len : int, 
+                             width : int)
 
         Override original method for using self._break_word() instead of slice.
         """

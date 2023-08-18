@@ -90,14 +90,14 @@ if __name__ == "__main__":
         "-i",
         "--input_pdf_path_or_dir",
         type=Path,
-        default="NAFNet-4-5.pdf",  
+        default="NAFNet-4-5.pdf",#"1711.07064-1.pdf",  
         help="Path to the PDF or directory of PDFs to be translated.",
     )
     parser.add_argument(
         "-l",
         "--language",
         type=str,
-        default="ja",  
+        default="vi",  
         help="The language to be translated to.",
     )
     parser.add_argument(
