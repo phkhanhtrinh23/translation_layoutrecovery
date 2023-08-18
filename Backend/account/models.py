@@ -1,27 +1,11 @@
+import os
+from django.conf import settings
 from django.db import models
 from django.contrib.auth.hashers import make_password, check_password
-
-# Create your models here.
 
 
 def generate_username(email):
     return email.split("@")[0]
-
-
-# def generate_profile_id():
-#     try:
-#         last_id_record = Profile.objects.last()
-#         if last_id_record:
-#             last_id = last_id_record.profile_id
-#         else:
-#             last_id = 0
-
-#         new_id = last_id + 1
-#         return new_id
-#     except Exception as e:
-#         # Handle any exceptions that might occur during ID generation
-#         print(f"An error occurred: {e}")
-#         return None
 
 
 def isAbleToUpdatePassword(self, new_password):
@@ -41,7 +25,10 @@ class Profile(models.Model):
     profile_id = models.AutoField(primary_key=True, unique=True)
     full_name = models.CharField(max_length=255, blank=False)
     bio = models.CharField(max_length=255, blank=True)
-    avatar = models.ImageField(upload_to="Avatar/", default="Avatar/avatar.png")
+    avatar = models.CharField(
+        max_length=255,
+        default="https://storage.googleapis.com/avatar-a0439.appspot.com/avatar.png",
+    )
 
     def __str__(self):
         return str(self.profile_id)

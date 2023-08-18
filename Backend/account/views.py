@@ -1,3 +1,4 @@
+import os
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -6,10 +7,23 @@ from account.serializers import UserSerializer, ProfileSerializer
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.parsers import JSONParser
 from django.contrib.sessions.models import Session
+from firebase_admin import credentials, initialize_app, storage
+import firebase_admin
+from dotenv import load_dotenv
+from django.conf import settings
 
+# Load the environment variables from the .env file
+load_dotenv()
 
-# Create your views here.
+credential_json = settings.CREDENTIAL_JSON
+storage_bucket = settings.STORAGE_BUCKET
+avatar_folder = os.path.join(settings.MEDIA_ROOT, "Avatars")
+pdf_folder = os.path.join(settings.MEDIA_ROOT, "PDFs")
 
+# Init firebase with your credentials
+if not firebase_admin._apps:
+    cred = credentials.Certificate(credential_json)
+    initialize_app(cred, {'storageBucket': storage_bucket})
 
 class Register(APIView):
     def post(self, request, *args, **kwargs):
@@ -107,7 +121,7 @@ class Logout(APIView):
             sessionid = request.data.get("sessionid")
             userid = request.data.get("userid")
             print(sessionid, userid)
-            # TODO: logout user by delete session id
+            # logout user by delete session id
             Session.objects.filter(session_key=sessionid).delete()
             response_data["status"] = "Logged out successfully"
         except Exception as error:
@@ -124,11 +138,11 @@ class GetProfileData(APIView):
         profile_data = JSONParser().parse(request)
         profile_id = profile_data["profile_id"]
         try:
-            full_name, bio, avatar = Profile.objects.get(profile_id=profile_id).getProfileData()
+            full_name, bio, avatar = Profile.objects.filter(profile_id=profile_id).getProfileData()
             response_data = {}
             response_data["full_name"] = full_name
             response_data["bio"] = bio
-            response_data["avatar"] = str(avatar)
+            response_data["avatar"] = avatar
             return Response(
                 {"status": "Got profile data successfully!", "data": response_data},
                 status=status.HTTP_200_OK,
@@ -142,8 +156,9 @@ class GetProfileData(APIView):
 
 class GetUserData(APIView):
     def post(self, request, *args, **kwargs):
-        user_data = JSONParser().parse(request)
-        user_id = user_data["user_id"]
+        # user_data = JSONParser().parse(request)
+        username = kwargs.get("username")
+        user_id = User.objects.get(username=username).user_id
         try:
             username, email, full_name, bio, date_joined, avatar = User.objects.get(
                 user_id=user_id
@@ -154,7 +169,7 @@ class GetUserData(APIView):
             response_data["full_name"] = full_name
             response_data["bio"] = bio
             response_data["date_joined"] = date_joined
-            response_data["avatar"] = str(avatar)
+            response_data["avatar"] = avatar
             return Response(
                 {"status": "Got user data successfully!", "data": response_data},
                 status=status.HTTP_200_OK,
@@ -165,21 +180,60 @@ class GetUserData(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+def save_uploaded_file(uploaded_file , destination_path):
+    # Step 0: Check if the destination path exists, if not, create it
+    os.makedirs(destination_path, exist_ok=True)
+
+    # Step 1: Access the file content
+    file_content = uploaded_file.read()
+    
+    # Step 2: Choose a destination path (including filename)
+    full_destination_path = os.path.join(destination_path, uploaded_file.name)
+    
+    # Step 3: Write content to the file
+    with open(full_destination_path, 'wb') as destination_file:
+        destination_file.write(file_content)
 
 class UpdateProfile(APIView):
     def post(self, request, *args, **kwargs):
-        profile_data = JSONParser().parse(request)
-        user_id = profile_data["user_id"]
+        username = kwargs.get("username")
+        profile_data = request.data
+        user_id = User.objects.get(username=username).user_id
         full_name = profile_data["full_name"]
         bio = profile_data["bio"]
-        # avatar = profile_data["avatar"]
+        avatar = profile_data["avatar"]
         try:
             profile = User.objects.get(user_id=user_id).profile
+            img_name = str(avatar)
+
+            # save the avatar file to avatar folder
+            save_uploaded_file(avatar, avatar_folder)
+
+            # Put your local file path 
+            fileName = os.path.join(avatar_folder, img_name)
+            bucket = storage.bucket()
+            blob = bucket.blob(img_name)
+            blob.upload_from_filename(fileName)
+
+            # make public access from the URL
+            blob.make_public()
+
+            # delete avatar just saved from avatar folder
+            os.remove(fileName)
+
             profile.updateName(full_name)
             profile.updateBio(bio)
-            # profile.updateAvatar(avatar)
+            profile.updateAvatar(blob.public_url)
+
+            response_data = {}
+            response_data["full_name"] = full_name
+            response_data["bio"] = bio
+            response_data["avatar"] = blob.public_url
+            print(response_data["avatar"])
+            
+
             return Response(
-                {"status": "Updated profile data successfully!", "data": profile_data},
+                {"status": "Updated profile data successfully!", "data": response_data},
                 status=status.HTTP_200_OK,
             )
         except Profile.DoesNotExist:

@@ -37,10 +37,8 @@ no input json
     "status": "Logged out successfully"
 }
 
-http://127.0.0.1:8000/getuser [POST]
-{
-    "user_id": 1
-}
+http://127.0.0.1:8000/getuser/<str:username> [POST]
+no input json
 {
     "status": "Got user data successfully!",
     "data": {
@@ -48,35 +46,89 @@ http://127.0.0.1:8000/getuser [POST]
         "email": "peter@gmail.com",
         "full_name": "Peter Nguyen",
         "bio": "",
-        "date_joined": "2023-08-15 11:22:00.843440",
-        "avatar": "Avatar/avatar.png"
+        "date_joined": "2023-08-18 00:45:38.260321",
+        "avatar": "https://storage.googleapis.com/avatar-a0439.appspot.com/avatar.png"
     }
 }
 
-http://127.0.0.1:8000/getprofile [POST]
-{
-    "profile_id": 1
-}
-{
-    "status": "Got profile data successfully!",
-    "data": {
-        "full_name": "Peter Nguyen",
-        "bio": "",
-        "avatar": "Avatar/avatar.png"
-    }
-}
 
-http://127.0.0.1:8000/updateprofile [POST]
-{
+http://127.0.0.1:8000/updateprofile/<str:username> [POST]
+{ FORMDATA NHA CAC BAN
     "user_id": 1,
     "full_name": "Kai Nguyen",
-    "bio": "My name is Kai!!"
+    "bio": "My name is Kai!!",
+    "avatar": FILE
 }
 {
     "status": "Updated profile data successfully!",
     "data": {
-        "user_id": 1,
         "full_name": "Kai Nguyen",
-        "bio": "My name is Kai!!"
+        "bio": "My name is Kai",
+        "avatar": "https://storage.googleapis.com/avatar-a0439.appspot.com/anonymous.jpg"
     }
+}
+
+http://127.0.0.1:8000/create [POST]
+{ FORMDATA NHA CAC BAN
+    "user_id": 1,
+    "file": FILE PDF,
+    "language": "vi"
+}
+{
+    "status": "success",
+    "data": {
+        "pdf_id": 5,
+        "file_name": "json.pdf",
+        "file": "https://storage.googleapis.com/avatar-a0439.appspot.com/json.pdf",
+        "language": "vi",
+        "created_at": "2023-08-18T16:23:30.621271",
+        "owner_id": 1
+    }
+}
+
+http://127.0.0.1:8000/pdf/peter?type=all [GET]
+no input json
+{
+    "status": "success",
+    "data": [
+        {
+            "pdf_id": 3,
+            "owner_id_id": 1,
+            "file_name": "json.pdf",
+            "file": "https://storage.googleapis.com/avatar-a0439.appspot.com/json.pdf",
+            "language": "vi",
+            "created_at": "2023-08-18T01:03:21.249260"
+        },
+        {
+            "pdf_id": 4,
+            "owner_id_id": 1,
+            "file_name": "CNTN-Thu-tu-bao-ve-Khoa-luan-tot-nghiep-K2019.pdf",
+            "file": "https://storage.googleapis.com/avatar-a0439.appspot.com/CNTN-Thu-tu-bao-ve-Khoa-luan-tot-nghiep-K2019.pdf",
+            "language": "vi",
+            "created_at": "2023-08-18T01:03:58.678241"
+        }
+    ]
+}
+
+http://127.0.0.1:8000/pdf/peter?type=search&query=CNTN [GET]
+no input json
+{
+    "status": "success",
+    "data": [
+        {
+            "pdf_id": 4,
+            "owner_id_id": 1,
+            "file_name": "CNTN-Thu-tu-bao-ve-Khoa-luan-tot-nghiep-K2019.pdf",
+            "file": "https://storage.googleapis.com/avatar-a0439.appspot.com/CNTN-Thu-tu-bao-ve-Khoa-luan-tot-nghiep-K2019.pdf",
+            "language": "vi",
+            "created_at": "2023-08-18T01:03:58.678241"
+        }
+    ]
+}
+
+http://127.0.0.1:8000/history/peter [GET]
+no input json
+{
+    "status": "success",
+    "data": [] HIEN TAI CHUA CO TRANSLATION NAO DE SHOW...
 }

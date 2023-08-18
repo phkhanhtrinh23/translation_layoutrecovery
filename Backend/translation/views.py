@@ -1,5 +1,7 @@
+import os
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
 from rest_framework import status
 from account.models import User, Profile
 from translation.models import PDF, Translation, Feedback
@@ -8,8 +10,26 @@ from translation.serializers import (
     TranslationSerializer,
     FeedbackSerializer,
 )
-from django.views.decorators.csrf import csrf_exempt
+
+# from django.views.decorators.csrf import csrf_exempt
 from rest_framework.parsers import JSONParser
+from firebase_admin import credentials, initialize_app, storage
+import firebase_admin
+from dotenv import load_dotenv
+from django.conf import settings
+
+# Load the environment variables from the .env file
+load_dotenv()
+
+credential_json = settings.CREDENTIAL_JSON
+storage_bucket = settings.STORAGE_BUCKET
+avatar_folder = os.path.join(settings.MEDIA_ROOT, "Avatars")
+pdf_folder = os.path.join(settings.MEDIA_ROOT, "PDFs")
+
+# Init firebase with your credentials
+if not firebase_admin._apps:
+    cred = credentials.Certificate(credential_json)
+    initialize_app(cred, {"storageBucket": storage_bucket})
 
 
 # Create your views here.
@@ -19,7 +39,11 @@ def getAllPDFs():
 
 
 def getUserPDFs(user_id, search=None):
-    pdfs = list(PDF.objects.filter(title__contains=search, owner_id=user_id).values())
+    pdfs = (
+        list(PDF.objects.filter(file_name__contains=search, owner_id=user_id).values())
+        if search
+        else list(PDF.objects.filter(owner_id=user_id).values())
+    )
     return pdfs
 
 
@@ -48,6 +72,21 @@ def updateOutput(translation_id, user_id, new_pdf_id):
     return False
 
 
+def save_uploaded_file(uploaded_file, destination_path):
+    # Step 0: Check if the destination path exists, if not, create it
+    os.makedirs(destination_path, exist_ok=True)
+
+    # Step 1: Access the file content
+    file_content = uploaded_file.read()
+
+    # Step 2: Choose a destination path (including filename)
+    full_destination_path = os.path.join(destination_path, uploaded_file.name)
+
+    # Step 3: Write content to the file
+    with open(full_destination_path, "wb") as destination_file:
+        destination_file.write(file_content)
+
+
 class GetUserPDFs(APIView):
     def get(self, request, *args, **kwargs):
         try:
@@ -57,7 +96,16 @@ class GetUserPDFs(APIView):
                 .values("user_id")
                 .first()["user_id"]
             )
-            ans = getUserPDFs(user_id)
+            op = request.query_params.get("type")
+            if op == "all":
+                ans = getUserPDFs(user_id)
+            elif op == "search":
+                search = request.query_params.get("query")
+                if search == None:
+                    search = ""
+                ans = getUserPDFs(user_id, search)
+            else:
+                ans = "Nothing"
             return Response(
                 {"status": "success", "data": ans}, status=status.HTTP_200_OK
             )
@@ -69,51 +117,70 @@ class GetUserPDFs(APIView):
             )
 
 
-class GetUserTranslations(APIView):
-    def get(self, request, *args, **kwargs):
-        try:
-            username = kwargs.get("username")
-            user_id = (
-                User.objects.filter(username=username)
-                .values("user_id")
-                .first()["user_id"]
-            )
-            ans = getUserTranslations(user_id)
-            return Response(
-                {"status": "success", "data": ans}, status=status.HTTP_200_OK
-            )
-        except Exception as e:
-            print(e)
-            return Response(
-                {"status": "error", "data": "Invalid request"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+# class GetUserTranslations(APIView):
+#     def get(self, request, *args, **kwargs):
+#         try:
+#             username = kwargs.get("username")
+#             user_id = (
+#                 User.objects.filter(username=username)
+#                 .values("user_id")
+#                 .first()["user_id"]
+#             )
+#             ans = getUserTranslations(user_id)
+#             return Response(
+#                 {"status": "success", "data": ans}, status=status.HTTP_200_OK
+#             )
+#         except Exception as e:
+#             print(e)
+#             return Response(
+#                 {"status": "error", "data": "Invalid request"},
+#                 status=status.HTTP_400_BAD_REQUEST,
+#             )
 
 
 class CreatePDF(APIView):
     def post(self, request, *args, **kwargs):
         try:
-            current_data = {
-                "owner_id": request.data["user_id"],
-                "file_name": request.data["file_name"],
-                "file": request.data["file"],
-                "language": request.data["language"],
-            }
+            pdf_data = request.data
+            user_id = pdf_data["user_id"]
+            file = pdf_data["file"]
+            language = pdf_data["language"]
 
-            print(current_data)
+            # get file name
+            pdf_name = str(file)
+            # save file to pdf folder
+            save_uploaded_file(file, pdf_folder)
+            # upload file just saved to firebase storage
+            fileName = os.path.join(pdf_folder, pdf_name)
+            bucket = storage.bucket()
+            blob = bucket.blob(pdf_name)
+            blob.upload_from_filename(fileName)
 
-            pdf_serializer = PDFSerializer(data=current_data)
-            if pdf_serializer.is_valid():
-                pdf_serializer.save()
+            # make public access from the URL
+            blob.make_public()
+
+            # delete avatar just saved from avatar folder
+            os.remove(fileName)
+
+            if User.objects.filter(user_id=user_id).exists():
+                current_data = {}
+                current_data["owner_id"] = user_id
+                current_data["file"] = blob.public_url
+                current_data["language"] = language
+                print(len(str(current_data["file"])))
+
+                pdf_serializer = PDFSerializer(data=current_data)
+                if pdf_serializer.is_valid():
+                    pdf_serializer.save()
+                    return Response(
+                        {"status": "success", "data": pdf_serializer.data},
+                        status=status.HTTP_200_OK,
+                    )
+                print(pdf_serializer.errors)
                 return Response(
-                    {"status": "success", "data": pdf_serializer.data},
-                    status=status.HTTP_200_OK,
+                    {"status": "error", "data": pdf_serializer.errors},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
-            print(pdf_serializer.errors)
-            return Response(
-                {"status": "error", "data": pdf_serializer.errors},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
         except Exception as e:
             print(e)
             return Response(
@@ -124,32 +191,77 @@ class CreatePDF(APIView):
 
 class ProcessTranslation(APIView):
     def post(self, request, *args, **kwargs):
-        translation_data = JSONParser().parse(request)
-        translation_serializers = TranslationSerializer(data=translation_data)
-        if translation_serializers.is_valid():
-            translation_serializers.save()
-            print(translation_serializers.data)
-            translation_id = translation_serializers.data["translation_id"]
-            file_input_id = translation_serializers.data["file_input"]
+        translation_data = request.data
+        try:
+            if PDF.objects.filter(pdf_id=translation_data["file_input"]).exists():
+                file_input = PDF.objects.get(pdf_id=translation_data["file_input"])
 
-            # TODO:
-            # process file_output_id by using AI model and update later...
-            file_output_id = 1
+                # TODO: process file_output_id by using AI model and update later...
 
-            user_id = PDF.objects.get(pdf_id=file_input_id).owner_id.user_id
-            if updateOutput(translation_id, user_id, file_output_id):
-                return Response(
-                    {"status": "success", "data": "Translation success!"},
-                    status=status.HTTP_200_OK,
+                # get file name
+                output_pdf_name = (
+                    str(file_input.file_name).split(".")[0] + "_translated.pdf"
                 )
-            else:
+                original_language = file_input.language
+                target_language = translation_data["language"]
+
+                # save file to pdf folder
+                # save_translated_file(output_pdf_name, pdf_folder)
+
+                # upload file just saved to firebase storage
+                fileName = os.path.join(pdf_folder, output_pdf_name)
+                bucket = storage.bucket()
+                blob = bucket.blob(output_pdf_name)
+                blob.upload_from_filename(fileName)
+
+                # make public access from the URL
+                blob.make_public()
+
+                # delete avatar just saved from avatar folder
+                os.remove(fileName)
+
+                new_pdf = PDF(
+                    owner_id=file_input.owner_id,
+                    file=blob.public_url,
+                    language=target_language,
+                )
+                new_pdf.save()
+
+                current_data = {}
+                current_data["status"] = 1
+                current_data["file_input"] = file_input.pdf_id
+                current_data["file_output"] = new_pdf.pdf_id
+                translation_serializer = TranslationSerializer(data=current_data)
+                if translation_serializer.is_valid():
+                    translation_serializer.save()
+                    return Response(
+                        {"status": "success", "data": translation_serializer.data},
+                        status=status.HTTP_200_OK,
+                    )
                 return Response(
-                    {"status": "error", "data": "Translation failed!"},
+                    {"status": "error", "data": translation_serializer.errors},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-        else:
+            else:
+                current_data = {}
+                current_data["status"] = -1
+                current_data["file_input"] = translation_data["file_input"]
+                current_data["file_output"] = "Null"
+                translation_serializer = TranslationSerializer(data=current_data)
+                if translation_serializer.is_valid():
+                    translation_serializer.save()
+                    return Response(
+                        {"status": "failure", "data": translation_serializer.data},
+                        status=status.HTTP_200_OK,
+                    )
+                return Response(
+                    {"status": "error", "data": "Invalid request"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        except Exception as e:
+            print(e)
             return Response(
-                {"status": "error", "data": translation_serializers.errors},
+                {"status": "failure", "data": "Invalid request"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -221,7 +333,9 @@ class FeedbackPDF(APIView):
                 User.objects.filter(user_id=user_id).exists()
                 and PDF.objects.filter(token_id=translation_id).exists()
             ):
-                feedback = Feedback.objects.get(user_id=user_id, translation_id=translation_id)
+                feedback = Feedback.objects.get(
+                    user_id=user_id, translation_id=translation_id
+                )
                 feedback.delete()
                 return Response(
                     {"status": "success", "data": "Remove feedback successfully!"},
@@ -242,7 +356,9 @@ class FeedbackPDF(APIView):
         try:
             user_id = kwargs.get("user_id")
             if User.objects.filter(user_id=user_id).exists():
-                feedbacks = Feedback.objects.filter(user_id=user_id).values("translation_id")
+                feedbacks = Feedback.objects.filter(user_id=user_id).values(
+                    "translation_id"
+                )
                 translation_ids = [feedback["translation_id"] for feedback in feedbacks]
                 res = list(
                     PDF.objects.filter(translation_id__in=translation_ids).values()
@@ -264,7 +380,9 @@ class HistoryView(APIView):
             if User.objects.filter(username=username).exists():
                 user_id = User.objects.get(username=username).user_id
                 data = []
-                translations = list(Translation.objects.filter(file_input__owner_id=user_id).values())
+                translations = list(
+                    Translation.objects.filter(file_input__owner_id=user_id).values()
+                )
                 for translation in translations:
                     translation_info = {
                         "file_input": translation.getFileInputName(),
@@ -278,7 +396,7 @@ class HistoryView(APIView):
                 )
             else:
                 return Response(
-                    {"status": "error", "data": "Invalid pdf"},
+                    {"status": "error", "data": "Invalid user"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
         except:

@@ -4,17 +4,30 @@ from account.models import User
 
 # Create your models here.
 class PDF(models.Model):
-    pdf_id = models.AutoField(primary_key=True)
+    pdf_id = models.AutoField(primary_key=True, unique=True)
     owner_id = models.ForeignKey(
         User, to_field="user_id", related_name="owner_id", on_delete=models.CASCADE
     )
-    file_name = models.CharField(max_length=100)
-    file = models.FileField(upload_to="PDFs/", default="PDFs/sample.pdf")
+    file_name = models.CharField(max_length=255, blank=True)
+    file = models.CharField(
+        max_length=255,
+        default="https://storage.googleapis.com/avatar-a0439.appspot.com/sample.pdf",
+    )
     language = models.CharField(max_length=2, default="en")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.file_name
+
+    def save(self, *args, **kwargs):
+        if not self.pdf_id:
+            last_pdf = PDF.objects.last()
+            last_id = last_pdf.pdf_id if last_pdf else 0
+            self.pdf_id = last_id + 1
+        if not self.file_name:
+            self.file_name = str(self.file).split("/")[-1]
+            print(self.file_name)
+        super().save(*args, **kwargs)
 
     def isOwner(self, id):
         return self.owner_id.user_id == id
@@ -56,10 +69,10 @@ class Translation(models.Model):
 
     def getFileOutputName(self):
         return self.file_output.file_name
-    
+
     def getFileInput(self):
         return self.file_input
-    
+
     def getFileOutput(self):
         return self.file_output
 
@@ -95,7 +108,10 @@ class Feedback(models.Model):
         User, to_field="user_id", related_name="user_id_f", on_delete=models.CASCADE
     )
     translation_id = models.ForeignKey(
-        Translation, to_field="translation_id", related_name="translation_id_f", on_delete=models.CASCADE
+        Translation,
+        to_field="translation_id",
+        related_name="translation_id_f",
+        on_delete=models.CASCADE,
     )
     rating = models.IntegerField(default=0)
 

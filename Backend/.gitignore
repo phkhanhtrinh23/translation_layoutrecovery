@@ -162,5 +162,5 @@ cython_debug/
 # file
 ngrok.exe
 
-# profile images folder
-**/Profiles
+*firebase-adminsdk*
+
