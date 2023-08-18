@@ -6,6 +6,8 @@
 
 ### Instruction
 
+0. Put the private files into Backend/ folder (.env and .json file)
+
 1. Create a new virtual environment with Python and activate it.
 
 ```
