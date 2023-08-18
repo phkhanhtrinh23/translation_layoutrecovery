@@ -37,7 +37,7 @@ no input json
     "status": "Logged out successfully"
 }
 
-http://127.0.0.1:8000/getuser/<str:username> [POST]
+http://127.0.0.1:8000/user/<str:username> [POST]
 no input json
 {
     "status": "Got user data successfully!",
