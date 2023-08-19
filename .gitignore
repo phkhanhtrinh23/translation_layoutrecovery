@@ -168,3 +168,4 @@ database/
 .env*
 migrations/
 ngrok.yml
+*.pth

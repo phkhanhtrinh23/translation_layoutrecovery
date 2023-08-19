@@ -4,3 +4,21 @@ djangorestframework==3.14.0
 firebase_admin==6.2.0
 python-dotenv==1.0.0
 psycopg2==2.9.7
+gdown
+opencv-python-headless
+networkx
+transformers
+sentencepiece
+paddleocr
+pdf2image
+fastapi[uvicorn]
+# PyPDF2
+matplotlib
+uvicorn
+paddlepaddle
+python-multipart
+torch==1.12.1+cu113
+torchvision==0.13.1+cu113
+torchaudio==0.12.1+cu113
+-f https://download.pytorch.org/whl/cu113/torch_stable.html
+fitz

@@ -1,21 +1,16 @@
 import copy
+import math
 import re
-import tempfile
 from pathlib import Path
 from typing import List, Tuple, Union
+from paddleocr import PaddleOCR
 import matplotlib.pyplot as plt
 import numpy as np
-import PyPDF2
-import uvicorn
-from fastapi import FastAPI, File, UploadFile
-from fastapi.responses import FileResponse
-from paddleocr import PaddleOCR, PPStructure
 from pdf2image import convert_from_bytes, convert_from_path
 from PIL import Image, ImageDraw, ImageFont
-from pydantic import BaseModel, Field
 from tqdm import tqdm
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, T5ForConditionalGeneration, T5Tokenizer, MarianMTModel, MarianTokenizer
-from utils import fw_fill_ja, fw_fill_vi
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+from Model.utils import fw_fill_ja, fw_fill_vi
 import torchvision
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
@@ -24,6 +19,7 @@ import torch
 import random
 import cv2
 import os
+import fitz
 
 seed = 1234
 random.seed(seed)
@@ -40,7 +36,7 @@ CATEGORIES2LABELS = {
     4: "table",
     5: "figure"
 }
-MODEL_PATH = "model_196000.pth"
+MODEL_PATH = os.path.join(os.getcwd(), "model_196000.pth")
 def get_instance_segmentation_model(num_classes):
     model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True)
     in_features = model.roi_heads.box_predictor.cls_score.in_features
@@ -55,26 +51,13 @@ def get_instance_segmentation_model(num_classes):
     )
     return model
 
-class InputPdf(BaseModel):
-    """Input PDF file."""
-    input_pdf: UploadFile = Field(..., title="Input PDF file")
-
-
-class TranslateApi:
-    """Translator API class.
+class TranslationLayoutRecovery:
+    """TranslationLayoutRecovery class.
 
     Attributes
     ----------
-    app: FastAPI
-        FastAPI instance
-    temp_dir: tempfile.TemporaryDirectory
-        Temporary directory for storing translated PDF files
-    temp_dir_name: Path
-        Path to the temporary directory
     font: ImageFont
         Font for drawing text on the image
-    layout_model: PPStructure
-        Layout model for detecting text blocks
     ocr_model: PaddleOCR
         OCR model for detecting text in the text blocks
     translate_model: MarianMTModel
@@ -87,67 +70,9 @@ class TranslateApi:
     FONT_SIZE_JAPANESE = 32
 
     def __init__(self):
-        self.app = FastAPI()
-        self.app.add_api_route(
-            "/translate_pdf/",
-            self.translate_pdf,
-            methods=["POST"],
-            response_class=FileResponse,
-        )
-        self.app.add_api_route(
-            "/clear_temp_dir/",
-            self.clear_temp_dir,
-            methods=["GET"],
-        )
-
         self.__load_models()
-        self.temp_dir = tempfile.TemporaryDirectory()
-        self.temp_dir_name = Path(self.temp_dir.name)
-        self.num_classes = len(CATEGORIES2LABELS.keys())
-        self.pub_model = get_instance_segmentation_model(self.num_classes)
 
-        if os.path.exists(MODEL_PATH):
-            self.checkpoint_path = MODEL_PATH
-        else:
-            raise Exception("Model weights not found.")
-
-        assert os.path.exists(self.checkpoint_path)
-        checkpoint = torch.load(self.checkpoint_path, map_location='cpu')
-        self.pub_model.load_state_dict(checkpoint['model'])
-        self.pub_model.eval()
-
-    def run(self):
-        """Run the API server"""
-        uvicorn.run(self.app, host="0.0.0.0", port=8090)
-
-    async def translate_pdf(self, language: str, input_pdf: UploadFile = File(...)) -> FileResponse:
-        """API endpoint for translating PDF files.
-
-        Parameters
-        ----------
-        input_pdf: UploadFile
-            Input PDF file
-
-        Returns
-        -------
-        FileResponse
-            Translated PDF file
-        """
-        input_pdf_data = await input_pdf.read()
-        self._translate_pdf(input_pdf_data, language, self.temp_dir_name)
-
-        return FileResponse(
-            self.temp_dir_name / "translated.pdf", media_type="application/pdf"
-        )
-
-    async def clear_temp_dir(self):
-        """API endpoint for clearing the temporary directory."""
-        self.temp_dir.cleanup()
-        self.temp_dir = tempfile.TemporaryDirectory()
-        self.temp_dir_name = Path(self.temp_dir.name)
-        return {"message": "temp dir cleared"}
-    
-    def _repeated_substring(self, s: str):
+    def __repeated_substring(self, s: str):
         n = len(s)
         temp = s.replace("(", "")
         temp = temp.replace(")", "")
@@ -163,7 +88,7 @@ class TranslateApi:
                 return True
         return False
 
-    def _translate_pdf(self, pdf_path_or_bytes: Union[Path, bytes], language: str, output_dir: Path) -> None:
+    def __translate_pdf(self, input_path: str, language: str, output_path: str, merge: bool) -> None:
         """Backend function for translating PDF files.
 
         Translation is performed in the following steps:
@@ -179,43 +104,47 @@ class TranslateApi:
 
         Parameters
         ----------
-        pdf_path_or_bytes: Union[Path, bytes]
+        input_path: str
             Path to the input PDF file or bytes of the input PDF file
-        output_dir: Path
+        output_path: str
             Path to the output directory
         """
-        if isinstance(pdf_path_or_bytes, Path):
-            pdf_images = convert_from_path(pdf_path_or_bytes, dpi=self.DPI)
-        else:
-            pdf_images = convert_from_bytes(pdf_path_or_bytes, dpi=self.DPI)
+        pdf_images = convert_from_path(input_path, dpi=self.DPI)
         print("Language:", language)
+        self.language = language
         pdf_files = []
         reached_references = False
-        for i, image in tqdm(enumerate(pdf_images)):
-            output_path = output_dir / f"{i:03}.pdf"
+        
+        # Batch
+        idx = 0
+        batch_size = 4
+        for _ in tqdm(range(math.ceil(len(pdf_images)/batch_size))):
+            image_list = pdf_images[idx:idx+batch_size]
             if not reached_references:
-                img, original_img, reached_references = self.__translate_one_page(
-                    image=image,
-                    language=language,
+                image_list, reached_references = self.__translate_multiple_pages(
+                    image_list=image_list,
                     reached_references=reached_references,
                 )
-                fig, ax = plt.subplots(1, 2, figsize=(20, 14))
-                ax[0].imshow(original_img)
-                ax[1].imshow(img)
-                ax[0].axis("off")
-                ax[1].axis("off")
-                plt.tight_layout()
-                plt.savefig(output_path, format="pdf", dpi=self.DPI)
-                plt.close(fig)
-            else:
-                (
-                    image.convert("RGB")
-                    .resize((int(1400 / image.size[1] * image.size[0]), 1400))
-                    .save(output_path, format="pdf")
-                )
-
-            pdf_files.append(str(output_path))
-
+                if merge:
+                    # merge original and translated images into 1 page
+                    for i, [translated_image, original_image] in enumerate(image_list):
+                        fig, ax = plt.subplots(1, 2, figsize=(20, 14))
+                        ax[0].imshow(original_image)
+                        ax[1].imshow(translated_image)
+                        ax[0].axis("off")
+                        ax[1].axis("off")
+                        plt.tight_layout()
+                        plt.savefig(output_path, format="pdf", dpi=self.DPI)
+                        plt.close(fig)
+                        pdf_files.append(output_path)
+                else:
+                    # convert image to pdf
+                    for i, [translated_image, _] in enumerate(image_list):
+                        color_converted = cv2.cvtColor(translated_image, cv2.COLOR_BGR2RGB)
+                        pil_image = Image.fromarray(color_converted)
+                        pil_image.save(output_path)
+                        pdf_files.append(output_path)
+               
         self.__merge_pdfs(pdf_files)
 
     def __load_models(self):
@@ -225,30 +154,198 @@ class TranslateApi:
         Load the layout model, OCR model, translation model and font.
         """
         self.font_ja = ImageFont.truetype(
-            "Source Han Serif CN Light.otf",
+           os.path.join(os.getcwd(), "Source Han Serif CN Light.otf"),
             size=self.FONT_SIZE_JAPANESE,
         )
         self.font_vi = ImageFont.truetype(
-            "AlegreyaSans-Regular.otf",
+            os.path.join(os.getcwd(), "AlegreyaSans-Regular.otf"),
             size=self.FONT_SIZE_VIETNAMESE,
         )
+        
+        # Detection model: PubLayNet
+        self.num_classes = len(CATEGORIES2LABELS.keys())
+        self.pub_model = get_instance_segmentation_model(self.num_classes)
 
-        # self.layout_model = PPStructure(table=False, ocr=False, lang="en")
+        if os.path.exists(MODEL_PATH):
+            self.checkpoint_path = MODEL_PATH
+        else:
+            raise Exception("Model weights not found.")
+
+        assert os.path.exists(self.checkpoint_path)
+        checkpoint = torch.load(self.checkpoint_path, map_location='cpu')
+        self.pub_model.load_state_dict(checkpoint['model'])
+        self.pub_model.eval()
+
+        # Recognition model: PaddleOCR
         self.ocr_model = PaddleOCR(ocr=True, lang="en", ocr_version="PP-OCRv3")
         
+        # Translation model
         self.translate_model_ja = AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-en-jap").to("cuda")
         self.translate_tokenizer_ja = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-jap")
         
         self.translate_model_vi = AutoModelForSeq2SeqLM.from_pretrained("VietAI/envit5-translation").to("cuda")
         self.translate_tokenizer_vi = AutoTokenizer.from_pretrained("VietAI/envit5-translation")
-        
-#         self.translate_model_vi = T5ForConditionalGeneration.from_pretrained("NlpHUST/t5-en-vi-small").to("cuda")
-#         self.translate_tokenizer_vi = T5Tokenizer.from_pretrained("NlpHUST/t5-en-vi-small")
 
-    def __translate_one_page(
+        self.transform = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.ToTensor()
+        ])
+
+    def __crop_img(self, box, ori_img):
+        new_box_0 = int(box[0] / self.rat) - 20
+        new_box_1 = int(box[1] / self.rat) - 20
+        new_box_2 = int(box[2] / self.rat) + 20
+        new_box_3 = int(box[3] / self.rat) + 20
+        temp_img = ori_img[new_box_1:new_box_3, new_box_0:new_box_2]
+        box = [new_box_0, new_box_1, new_box_2, new_box_3]
+        return temp_img, box
+
+    def __ocr_module(self, list_boxes, list_labels_idx, ori_img):
+        original_image = copy.deepcopy(ori_img)
+        list_labels = list(map(lambda y: CATEGORIES2LABELS[y.item()], list_labels_idx))
+        list_masks = list(map(lambda x: x == "text", list_labels))
+        list_boxes_filtered = np.array(list_boxes)[list_masks]
+        list_images_filtered = [original_image] * len(list_boxes_filtered)
+
+        results = list(map(self.__crop_img, list_boxes_filtered, list_images_filtered))
+
+        if len(results) > 0:
+            list_temp_images, list_new_boxes = np.array(results)[:,0], np.array(results)[:,1]
+            
+            list_ocr_results = list(map(lambda x: np.array(x)[:, 0] if len(x) > 0 else None, 
+                                        list(map(lambda x: self.ocr_model(x)[1], list_temp_images))))
+
+            for ocr_results, box in zip(list_ocr_results, list_new_boxes):
+                if ocr_results is not None:
+                    ocr_text = text = " ".join(ocr_results)
+                    if len(ocr_text) > 1:
+                        text = re.sub(r"\n|\t|\[|\]|\/|\|", " ", ocr_text)
+                        translated_text = self.__translate(text)
+                        translated_text = re.sub(r"\n|\t|\[|\]|\/|\|", " ", translated_text)
+
+                        # if most characters in translated text are not 
+                        # japanese characters, skip
+                        if self.language == "ja":
+                            if len(
+                                re.findall(
+                                    r"[^\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\u3400-\u4DBF]",
+                                    translated_text,
+                                )
+                            ) > 0.8 * len(translated_text):
+                                print("skipped")
+                                continue
+                        
+                        # if the text is too short, skip
+                        if len(translated_text) < 20:
+                            print("skipped")
+                            continue
+                        
+                        # for VietAI/envit5-translation, replace "vi"
+                        if self.language == "vi":
+                            translated_text = translated_text.replace("vi: ", "")
+                            translated_text = translated_text.replace("vi ", "")
+                            translated_text = translated_text.strip()
+                            
+                        if self.language == "ja":
+                            if self._repeated_substring(translated_text): # Check repeated substring
+                                processed_text = fw_fill_ja(
+                                    text,
+                                    width=int(
+                                        (box[2] - box[0]) / (self.FONT_SIZE_JAPANESE / 2)
+                                    )
+                                    + 5,
+                                )
+                            else:
+                                processed_text = fw_fill_ja(
+                                    translated_text,
+                                    width=int(
+                                        (box[2] - box[0]) / (self.FONT_SIZE_JAPANESE / 2)
+                                    )
+                                    + 5,
+                                )
+                        else:
+                            if self._repeated_substring(translated_text):
+                                processed_text = fw_fill_vi(
+                                    text,
+                                    width=int(
+                                        (box[2] - box[0]) / (self.FONT_SIZE_VIETNAMESE / 2)
+                                    )
+                                    + 10,
+                                )
+                            else:
+                                processed_text = fw_fill_vi(
+                                    translated_text,
+                                    width=int(
+                                        (box[2] - box[0]) / (self.FONT_SIZE_VIETNAMESE / 2)
+                                    )
+                                    + 10,
+                                )
+
+                        new_block = Image.new(
+                            "RGB",
+                            (
+                                box[2] - box[0],
+                                box[3] - box[1],
+                            ),
+                            color=(255, 255, 255),
+                        )
+                        draw = ImageDraw.Draw(new_block)
+                        if self.language == "ja":
+                            draw.text(
+                                (0, 0),
+                                text=processed_text,
+                                font=self.font_ja,
+                                fill=(0, 0, 0),
+                            )
+                        else:
+                            draw.text(
+                                (0, 0),
+                                text=processed_text,
+                                font=self.font_vi,
+                                fill=(0, 0, 0),
+                            )
+                        
+                        new_block = np.array(new_block)
+                        original_image[
+                            int(box[1]) : int(box[3]),
+                            int(box[0]) : int(box[2]),
+                        ] = new_block
+                else:
+                    continue
+
+        reached_references = False
+
+        # Check title "Reference" or "References", if so then stop
+        list_title_masks = list(map(lambda x: x == "title", list_labels))
+        list_boxes_filtered = np.array(list_boxes)[list_title_masks]
+        list_images_filtered = [original_image] * len(list_boxes_filtered)
+
+        results = list(map(self.__crop_img, list_boxes_filtered, list_images_filtered))
+        if len(results) > 0:
+            list_temp_images = np.array(results)[:,0]
+            list_title_ocr_results = list(map(lambda x: np.array(x)[:, 0], 
+                                        list(map(lambda x: self.ocr_model(x)[1], list_temp_images))))
+            check_title = sum([1 if result[0].lower() in ["references", "reference"] else 0 for result in list_title_ocr_results])
+            if check_title:
+                reached_references = True
+        
+        return original_image, reached_references
+    
+    def __preprocess_image(self, image):
+        ori_img = np.array(image)
+        img = ori_img[:, :, ::-1].copy()
+        
+        # Get the ratio to resize
+        self.rat = 1000 / img.shape[0]
+
+        img = cv2.resize(img, None, fx=self.rat, fy=self.rat)
+        img = self.transform(img)
+
+        return [img, ori_img]
+    
+    def __translate_multiple_pages(
         self,
-        image: Image.Image,
-        language: str,
+        image_list: List[Image.Image],
         reached_references: bool,
     ) -> Tuple[np.ndarray, np.ndarray, bool]:
         """Translate one page of the PDF file.
@@ -271,157 +368,27 @@ class TranslateApi:
             Translated image, original image,
             and whether the references section has been reached.
         """
-        ori_img = np.array(image)
-        temp = Image.fromarray(ori_img)
-        image_path = "output_image.png"
-        temp.save(image_path)
-        original_img = copy.deepcopy(ori_img)
-        img = cv2.imread(image_path)
-        rat = 1000 / img.shape[0]
-        # print("rat:", rat)
-        img = cv2.resize(img, None, fx=rat, fy=rat)
-        
-        transform = transforms.Compose([
-            transforms.ToPILImage(),
-            transforms.ToTensor()
-        ])
-        
-        img = transform(img)
+        results = list(map(self.__preprocess_image, image_list))
+        new_list_images, list_original_images = np.array(results)[:,0], np.array(results)[:,1]
         with torch.no_grad():
-            prediction = self.pub_model([img])
-        
-        img = torch.squeeze(img, 0).permute(1, 2, 0).mul(255).numpy().astype(np.uint8)
-        overlay = img.copy()
-        alpha = 0.5
-        img = cv2.addWeighted(img, alpha, overlay, 1 - alpha, 0)
+            predictions = self.pub_model(new_list_images)
 
-        for pred in prediction:
-            for idx, _ in enumerate(pred['masks']):
-                if pred['scores'][idx].item() < 0.7:
-                    continue
+        list_masks = list(map(lambda x : x["scores"] >= 0.7, predictions))
+        new_list_boxes = list(map(lambda x, y : x['boxes'][y,:], predictions, list_masks))
+        new_list_labels = list(map(lambda x, y : x["labels"][y], predictions, list_masks))   
 
-                box = list(map(int, pred["boxes"][idx].tolist()))
-                label = CATEGORIES2LABELS[pred["labels"][idx].item()]
-                print("box: {}, label: {}".format(box, label))
+        list_returned_images = []
+        reached_references = False
+        for one_image_boxes, one_image_labels, original_image in zip(new_list_boxes, new_list_labels, 
+                                                                                list_original_images):
+            one_translated_image, reached_references = self.__ocr_module(one_image_boxes, one_image_labels, original_image)
+            list_returned_images.append([one_translated_image, original_image])
+            if reached_references:
+                break
 
-                new_box_0 = int(box[0] / rat)
-                new_box_1 = int(box[1] / rat)
-                new_box_2 = int(box[2] / rat)
-                new_box_3 = int(box[3] / rat)
-                # thickness = -1
-                if label == "text":
-                    # print("label:", label)
-                    temp_img = ori_img[new_box_1:new_box_3, new_box_0:new_box_2]
+        return list_returned_images, reached_references
 
-                    ocr_results = list(map(lambda x: x[0], self.ocr_model(temp_img)[1]))
-
-                    if len(ocr_results) > 1:
-                        text = " ".join(ocr_results)
-                        text = re.sub(r"\n|\t|\[|\]|\/|\|", " ", text)
-                        print("OCR results:", text)
-                        translated_text = self.__translate(text, language)
-                        translated_text = re.sub(r"\n|\t|\[|\]|\/|\|", " ", translated_text)
-
-                        # if almost all characters in translated text are not japanese characters, skip
-                        if language == "ja":
-                            if len(
-                                re.findall(
-                                    r"[^\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\u3400-\u4DBF]",
-                                    translated_text,
-                                )
-                            ) > 0.8 * len(translated_text):
-                                print("skipped")
-                                continue
-                        
-                        # if text is too short, skip
-                        if len(translated_text) < 20:
-                            print("skipped")
-                            continue
-                        
-                        # for VietAI/envit5-translation
-                        if language == "vi":
-                            translated_text = translated_text.replace("vi: ", "")
-                            translated_text = translated_text.replace("vi ", "")
-                            translated_text = translated_text.strip()
-                            
-                        print("CHECK REPETITION:",  self._repeated_substring(translated_text))
-                        if language == "ja":
-                            if self._repeated_substring(translated_text):
-                                print("REPEATED TEXT Detected!")
-                                processed_text = fw_fill_ja(
-                                    text,
-                                    width=int(
-                                        (new_box_2 - new_box_0) / (self.FONT_SIZE_JAPANESE / 2)
-                                    )
-                                    - 1,
-                                )
-                            else:
-                                processed_text = fw_fill_ja(
-                                    translated_text,
-                                    width=int(
-                                        (new_box_2 - new_box_0) / (self.FONT_SIZE_JAPANESE / 2)
-                                    )
-                                    - 1,
-                                )
-                        else:
-                            if self._repeated_substring(translated_text):
-                                print("REPEATED TEXT Detected!")
-                                processed_text = fw_fill_vi(
-                                    text,
-                                    width=int(
-                                        (new_box_2 - new_box_0) / (self.FONT_SIZE_VIETNAMESE / 2)
-                                    )
-                                    - 1,
-                                )
-                            else:
-                                processed_text = fw_fill_vi(
-                                    translated_text,
-                                    width=int(
-                                        (new_box_2 - new_box_0) / (self.FONT_SIZE_VIETNAMESE / 2)
-                                    )
-                                    - 1,
-                                )
-
-                        print("Processed_text:\n", processed_text)
-                        new_block = Image.new(
-                            "RGB",
-                            (
-                                new_box_2 - new_box_0,
-                                new_box_3 - new_box_1,
-                            ),
-                            color=(255, 255, 255),
-                        )
-                        draw = ImageDraw.Draw(new_block)
-                        if language == "ja":
-                            draw.text(
-                                (0, 0),
-                                text=processed_text,
-                                font=self.font_ja,
-                                fill=(0, 0, 0),
-                            )
-                        else:
-                            draw.text(
-                                (0, 0),
-                                text=processed_text,
-                                font=self.font_vi,
-                                fill=(0, 0, 0),
-                            )
-                        
-                        new_block = np.array(new_block)
-                        ori_img[
-                            int(new_box_1) : int(new_box_3),
-                            int(new_box_0) : int(new_box_2),
-                        ] = new_block
-                else:
-                    try:
-                        title = self.ocr_model(img)[1][0][0]
-                    except IndexError:
-                        continue
-                    if title.lower() == "references" or title.lower() == "reference":
-                        reached_references = True
-            return ori_img, original_img, reached_references
-
-    def __translate(self, text: str, language: str) -> str:
+    def __translate(self, text: str) -> str:
         """Translate text using the translation model.
 
         If the text is too long, it will be splited with
@@ -441,7 +408,7 @@ class TranslateApi:
 
         translated_texts = []
         for i, t in enumerate(texts):
-            if language == "ja":
+            if self.language == "ja":
                 inputs = self.translate_tokenizer_ja(t, return_tensors="pt").input_ids.to(
                     "cuda"
                 )
@@ -455,11 +422,10 @@ class TranslateApi:
                 res = self.translate_tokenizer_vi.decode(outputs[0], skip_special_tokens=True)
             
             # skip weird translations
-            if language == "ja" and res.startswith("「この版"):
+            if self.language == "ja" and res.startswith("「この版"):
                 continue
 
             translated_texts.append(res)
-        print("Translation:\n", translated_texts)
         return " ".join(translated_texts)
 
     def __split_text(self, text: str, text_limit: int = 448) -> List[str]:
@@ -512,13 +478,18 @@ class TranslateApi:
             List of paths to translated PDF files stored in
             the temp directory.
         """
-        pdf_merger = PyPDF2.PdfMerger()
-
+        result = fitz.open()
         for pdf_file in sorted(pdf_files):
-            pdf_merger.append(pdf_file)
-        pdf_merger.write(self.temp_dir_name / "translated.pdf")
-
+            with fitz.open(pdf_file) as f:
+                result.insert_pdf(f)
+                # os.remove(pdf_file)
+        result.save("outputs/fitz_translated.pdf")
 
 if __name__ == "__main__":
-    translate_api = TranslateApi()
-    translate_api.run()
+    obj = TranslationLayoutRecovery()
+    obj.__translate_pdf(
+        language="ja",
+        input_path="1711.07064.pdf",
+        output_dir="outputs/",
+        merge=False,
+    )

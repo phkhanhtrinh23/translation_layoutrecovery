@@ -18,6 +18,8 @@ import firebase_admin
 from dotenv import load_dotenv
 from django.conf import settings
 
+from Model.main import TranslationLayoutRecovery
+
 # Load the environment variables from the .env file
 load_dotenv()
 
@@ -25,6 +27,8 @@ credential_json = settings.CREDENTIAL_JSON
 storage_bucket = settings.STORAGE_BUCKET
 avatar_folder = os.path.join(settings.MEDIA_ROOT, "Avatars")
 pdf_folder = os.path.join(settings.MEDIA_ROOT, "PDFs")
+
+obj = TranslationLayoutRecovery()
 
 # Init firebase with your credentials
 if not firebase_admin._apps:
@@ -196,10 +200,9 @@ class ProcessTranslation(APIView):
             if PDF.objects.filter(pdf_id=translation_data["file_input"]).exists():
                 file_input = PDF.objects.get(pdf_id=translation_data["file_input"])
 
-                # TODO: process file_output by using AI model and update later...
-
                 # get file name
                 input_name = str(file_input.file_name)
+                
                 output_name = (
                     str(file_input.file_name).split(".")[0] + "_translated.pdf"
                 )
@@ -214,7 +217,17 @@ class ProcessTranslation(APIView):
                 # save_translated_file(output_pdf_name, pdf_folder)
 
                 # upload file just saved to firebase storage
+                file_name_input = os.path.join(pdf_folder, input_name)
                 file_name_output = os.path.join(pdf_folder, output_name)
+                
+                # TODO: process file_output by using AI model and update later...
+                obj.__translate_pdf(
+                    language=target_language,
+                    input_path=file_name_input,
+                    output_path=file_name_output,
+                    merge=False,
+                )
+                
                 bucket = storage.bucket()
                 blob = bucket.blob(output_name)
                 blob.upload_from_filename(file_name_output)
@@ -223,7 +236,7 @@ class ProcessTranslation(APIView):
                 blob.make_public()
 
                 # delete original pdf and output pdf just saved from pdf folder
-                os.remove(os.path.join(pdf_folder, input_name))
+                os.remove(file_name_input)
                 os.remove(file_name_output)
 
                 new_pdf = PDF(
