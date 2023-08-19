@@ -20,6 +20,10 @@ import random
 import cv2
 import os
 import fitz
+import logging
+
+logger = logging.getLogger('paddle')
+logger.setLevel(logging.WARN)
 
 seed = 1234
 random.seed(seed)
@@ -70,9 +74,9 @@ class TranslationLayoutRecovery:
     FONT_SIZE_JAPANESE = 32
 
     def __init__(self):
-        self.__load_models()
+        self._load_models()
 
-    def __repeated_substring(self, s: str):
+    def _repeated_substring(self, s: str):
         n = len(s)
         temp = s.replace("(", "")
         temp = temp.replace(")", "")
@@ -88,7 +92,7 @@ class TranslationLayoutRecovery:
                 return True
         return False
 
-    def __translate_pdf(self, pdf_path_or_bytes: Union[Path, bytes], language: str, output_dir: Path, merge: bool) -> None:
+    def _translate_pdf(self, pdf_path_or_bytes: Union[Path, bytes], language: str, output_dir: Path, merge: bool) -> None:
         """Backend function for translating PDF files.
 
         Translation is performed in the following steps:
@@ -125,7 +129,7 @@ class TranslationLayoutRecovery:
         for _ in tqdm(range(math.ceil(len(pdf_images)/batch_size))):
             image_list = pdf_images[idx:idx+batch_size]
             if not reached_references:
-                image_list, reached_references = self.__translate_multiple_pages(
+                image_list, reached_references = self._translate_multiple_pages(
                     image_list=image_list,
                     reached_references=reached_references,
                 )
@@ -151,9 +155,9 @@ class TranslationLayoutRecovery:
                         pil_image.save(output_path)
                         pdf_files.append(output_path)
                
-        self.__merge_pdfs(pdf_files)
+        self._merge_pdfs(pdf_files)
 
-    def __load_models(self):
+    def _load_models(self):
         """Backend function for loading models.
 
         Called in the constructor.
@@ -197,7 +201,7 @@ class TranslationLayoutRecovery:
             transforms.ToTensor()
         ])
 
-    def __crop_img(self, box, ori_img):
+    def _crop_img(self, box, ori_img):
         new_box_0 = int(box[0] / self.rat) - 20
         new_box_1 = int(box[1] / self.rat) - 20
         new_box_2 = int(box[2] / self.rat) + 20
@@ -206,14 +210,14 @@ class TranslationLayoutRecovery:
         box = [new_box_0, new_box_1, new_box_2, new_box_3]
         return temp_img, box
 
-    def __ocr_module(self, list_boxes, list_labels_idx, ori_img):
+    def _ocr_module(self, list_boxes, list_labels_idx, ori_img):
         original_image = copy.deepcopy(ori_img)
         list_labels = list(map(lambda y: CATEGORIES2LABELS[y.item()], list_labels_idx))
         list_masks = list(map(lambda x: x == "text", list_labels))
         list_boxes_filtered = np.array(list_boxes)[list_masks]
         list_images_filtered = [original_image] * len(list_boxes_filtered)
 
-        results = list(map(self.__crop_img, list_boxes_filtered, list_images_filtered))
+        results = list(map(self._crop_img, list_boxes_filtered, list_images_filtered))
 
         if len(results) > 0:
             list_temp_images, list_new_boxes = np.array(results)[:,0], np.array(results)[:,1]
@@ -226,7 +230,7 @@ class TranslationLayoutRecovery:
                     ocr_text = text = " ".join(ocr_results)
                     if len(ocr_text) > 1:
                         text = re.sub(r"\n|\t|\[|\]|\/|\|", " ", ocr_text)
-                        translated_text = self.__translate(text)
+                        translated_text = self._translate(text)
                         translated_text = re.sub(r"\n|\t|\[|\]|\/|\|", " ", translated_text)
 
                         # if most characters in translated text are not 
@@ -326,18 +330,35 @@ class TranslationLayoutRecovery:
         list_boxes_filtered = np.array(list_boxes)[list_title_masks]
         list_images_filtered = [original_image] * len(list_boxes_filtered)
 
-        results = list(map(self.__crop_img, list_boxes_filtered, list_images_filtered))
+        results = list(map(self._crop_img, list_boxes_filtered, list_images_filtered))
         if len(results) > 0:
             list_temp_images = np.array(results)[:,0]
             list_title_ocr_results = list(map(lambda x: np.array(x)[:, 0], 
                                         list(map(lambda x: self.ocr_model(x)[1], list_temp_images))))
-            check_title = sum([1 if result[0].lower() in ["references", "reference"] else 0 for result in list_title_ocr_results])
-            if check_title:
-                reached_references = True
-        
+            # check_title = sum([1 if result[0].lower() in ["references", "reference"] else 0 for result in list_title_ocr_results])
+            # if check_title:
+            #     reached_references = True
+            for i, (result, box) in enumerate(zip(list_title_ocr_results, list_boxes_filtered)):
+                if result[0].lower() in ["references", "reference"]:
+                    reached_references = True
+                elif result[0].lower() == "abstract":
+                    # Use the original Title and Authors, skip translating them
+                    new_box_1 = int(box[1] / self.rat)
+                    original_image[
+                        int(0) : int(new_box_1),
+                        int(0) : int(original_image.shape[1]),
+                    ] = ori_img[
+                        int(0) : int(new_box_1),
+                        int(0) : int(ori_img.shape[1]),
+                    ]
+                    # cv2.imwrite(f"temp_{i}.png", original_image[
+                    #     int(box[1]) : int(box[3]),
+                    #     int(box[0]) : int(box[2]),
+                    # ])
+                    
         return original_image, reached_references
     
-    def __preprocess_image(self, image):
+    def _preprocess_image(self, image):
         ori_img = np.array(image)
         img = ori_img[:, :, ::-1].copy()
         
@@ -349,7 +370,7 @@ class TranslationLayoutRecovery:
 
         return [img, ori_img]
     
-    def __translate_multiple_pages(
+    def _translate_multiple_pages(
         self,
         image_list: List[Image.Image],
         reached_references: bool,
@@ -363,7 +384,7 @@ class TranslationLayoutRecovery:
 
         Parameters
         ----------
-        image: Image.Image
+        image_list: List[Image.Image]
             Image of the page
         reached_references: bool
             Whether the references section has been reached.
@@ -374,7 +395,7 @@ class TranslationLayoutRecovery:
             Translated image, original image,
             and whether the references section has been reached.
         """
-        results = list(map(self.__preprocess_image, image_list))
+        results = list(map(self._preprocess_image, image_list))
         new_list_images, list_original_images = np.array(results)[:,0], np.array(results)[:,1]
         with torch.no_grad():
             predictions = self.pub_model(new_list_images)
@@ -387,14 +408,14 @@ class TranslationLayoutRecovery:
         reached_references = False
         for one_image_boxes, one_image_labels, original_image in zip(new_list_boxes, new_list_labels, 
                                                                                 list_original_images):
-            one_translated_image, reached_references = self.__ocr_module(one_image_boxes, one_image_labels, original_image)
+            one_translated_image, reached_references = self._ocr_module(one_image_boxes, one_image_labels, original_image)
             list_returned_images.append([one_translated_image, original_image])
             if reached_references:
                 break
 
         return list_returned_images, reached_references
 
-    def __translate(self, text: str) -> str:
+    def _translate(self, text: str) -> str:
         """Translate text using the translation model.
 
         If the text is too long, it will be splited with
@@ -410,22 +431,26 @@ class TranslationLayoutRecovery:
         str
             Translated text.
         """
-        texts = self.__split_text(text, 448)
+        texts = self._split_text(text, 448)
 
         translated_texts = []
         for i, t in enumerate(texts):
-            if self.language == "ja":
-                inputs = self.translate_tokenizer_ja(t, return_tensors="pt").input_ids.to(
-                    "cuda"
-                )
-                outputs = self.translate_model_ja.generate(inputs, max_length=512)
-                res = self.translate_tokenizer_ja.decode(outputs[0], skip_special_tokens=True)
+            http_res = "http" in t
+            if not http_res:
+                if self.language == "ja":
+                    inputs = self.translate_tokenizer_ja(t, return_tensors="pt").input_ids.to(
+                        "cuda"
+                    )
+                    outputs = self.translate_model_ja.generate(inputs, max_length=512)
+                    res = self.translate_tokenizer_ja.decode(outputs[0], skip_special_tokens=True)
+                else:
+                    inputs = self.translate_tokenizer_vi(t, return_tensors="pt").input_ids.to(
+                        "cuda"
+                    )
+                    outputs = self.translate_model_vi.generate(inputs, max_length=512)
+                    res = self.translate_tokenizer_vi.decode(outputs[0], skip_special_tokens=True)
             else:
-                inputs = self.translate_tokenizer_vi(t, return_tensors="pt").input_ids.to(
-                    "cuda"
-                )
-                outputs = self.translate_model_vi.generate(inputs, max_length=512)
-                res = self.translate_tokenizer_vi.decode(outputs[0], skip_special_tokens=True)
+                res = t
             
             # skip weird translations
             if self.language == "ja" and res.startswith("「この版"):
@@ -434,7 +459,7 @@ class TranslationLayoutRecovery:
             translated_texts.append(res)
         return " ".join(translated_texts)
 
-    def __split_text(self, text: str, text_limit: int = 448) -> List[str]:
+    def _split_text(self, text: str, text_limit: int = 448) -> List[str]:
         """Split text into chunks of sentences within text_limit.
 
         Parameters
@@ -472,7 +497,7 @@ class TranslationLayoutRecovery:
             result.append(current_text)
         return result
 
-    def __merge_pdfs(self, pdf_files: List[str]) -> None:
+    def _merge_pdfs(self, pdf_files: List[str]) -> None:
         """Merge translated PDF files into one file.
 
         Merged file will be stored in the temp directory
@@ -493,7 +518,7 @@ class TranslationLayoutRecovery:
 
 if __name__ == "__main__":
     obj = TranslationLayoutRecovery()
-    obj.__translate_pdf(
+    obj._translate_pdf(
         language="ja",
         pdf_path_or_bytes="1711.07064.pdf",
         output_dir="outputs/",
