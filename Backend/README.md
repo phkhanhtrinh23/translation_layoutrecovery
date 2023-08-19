@@ -11,6 +11,7 @@
 1. Create a new virtual environment with Python and activate it.
 
 ```
+cd Backend/
 python -m venv env
 source env/bin/activate
 ```
