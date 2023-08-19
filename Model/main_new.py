@@ -1,23 +1,15 @@
 import copy
 import math
 import re
-import tempfile
 from pathlib import Path
 from typing import List, Tuple, Union
+from paddleocr import PaddleOCR
 import matplotlib.pyplot as plt
 import numpy as np
-import PyPDF2
-import uvicorn
-from fastapi import FastAPI, File, UploadFile
-from fastapi.responses import FileResponse
-from paddleocr import PaddleOCR, PPStructure
-from paddleocr.tools.infer.predict_rec import TextRecognizer
-import paddleocr.tools.infer.utility as utility
 from pdf2image import convert_from_bytes, convert_from_path
 from PIL import Image, ImageDraw, ImageFont
-from pydantic import BaseModel, Field
 from tqdm import tqdm
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, T5ForConditionalGeneration, T5Tokenizer, MarianMTModel, MarianTokenizer
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from utils import fw_fill_ja, fw_fill_vi
 import torchvision
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
@@ -27,6 +19,7 @@ import torch
 import random
 import cv2
 import os
+import fitz
 
 seed = 1234
 random.seed(seed)
@@ -58,26 +51,13 @@ def get_instance_segmentation_model(num_classes):
     )
     return model
 
-class InputPdf(BaseModel):
-    """Input PDF file."""
-    input_pdf: UploadFile = Field(..., title="Input PDF file")
-
-
-class TranslateApi:
-    """Translator API class.
+class TranslationLayoutRecovery:
+    """TranslationLayoutRecovery class.
 
     Attributes
     ----------
-    app: FastAPI
-        FastAPI instance
-    temp_dir: tempfile.TemporaryDirectory
-        Temporary directory for storing translated PDF files
-    temp_dir_name: Path
-        Path to the temporary directory
     font: ImageFont
         Font for drawing text on the image
-    layout_model: PPStructure
-        Layout model for detecting text blocks
     ocr_model: PaddleOCR
         OCR model for detecting text in the text blocks
     translate_model: MarianMTModel
@@ -90,67 +70,9 @@ class TranslateApi:
     FONT_SIZE_JAPANESE = 32
 
     def __init__(self):
-        # self.app = FastAPI()
-        # self.app.add_api_route(
-        #     "/translate_pdf/",
-        #     self.translate_pdf,
-        #     methods=["POST"],
-        #     response_class=FileResponse,
-        # )
-        # self.app.add_api_route(
-        #     "/clear_temp_dir/",
-        #     self.clear_temp_dir,
-        #     methods=["GET"],
-        # )
-
         self.__load_models()
-        self.temp_dir = tempfile.TemporaryDirectory()
-        self.temp_dir_name = Path(self.temp_dir.name)
-        self.num_classes = len(CATEGORIES2LABELS.keys())
-        self.pub_model = get_instance_segmentation_model(self.num_classes)
 
-        if os.path.exists(MODEL_PATH):
-            self.checkpoint_path = MODEL_PATH
-        else:
-            raise Exception("Model weights not found.")
-
-        assert os.path.exists(self.checkpoint_path)
-        checkpoint = torch.load(self.checkpoint_path, map_location='cpu')
-        self.pub_model.load_state_dict(checkpoint['model'])
-        self.pub_model.eval()
-
-    # def run(self):
-    #     """Run the API server"""
-    #     uvicorn.run(self.app, host="0.0.0.0", port=8090)
-
-    async def translate_pdf(self, language: str, input_pdf: UploadFile = File(...)) -> FileResponse:
-        """API endpoint for translating PDF files.
-
-        Parameters
-        ----------
-        input_pdf: UploadFile
-            Input PDF file
-
-        Returns
-        -------
-        FileResponse
-            Translated PDF file
-        """
-        input_pdf_data = await input_pdf.read()
-        self._translate_pdf(input_pdf_data, language, self.temp_dir_name)
-
-        return FileResponse(
-            self.temp_dir_name / "translated.pdf", media_type="application/pdf"
-        )
-
-    def clear_temp_dir(self):
-        """API endpoint for clearing the temporary directory."""
-        self.temp_dir.cleanup()
-        self.temp_dir = tempfile.TemporaryDirectory()
-        self.temp_dir_name = Path(self.temp_dir.name)
-        return {"message": "temp dir cleared"}
-    
-    def _repeated_substring(self, s: str):
+    def __repeated_substring(self, s: str):
         n = len(s)
         temp = s.replace("(", "")
         temp = temp.replace(")", "")
@@ -166,7 +88,7 @@ class TranslateApi:
                 return True
         return False
 
-    def _translate_pdf(self, pdf_path_or_bytes: Union[Path, bytes], language: str, output_dir: Path) -> None:
+    def __translate_pdf(self, pdf_path_or_bytes: Union[Path, bytes], language: str, output_dir: Path, merge: bool) -> None:
         """Backend function for translating PDF files.
 
         Translation is performed in the following steps:
@@ -199,7 +121,7 @@ class TranslateApi:
         
         # Batch
         idx = 0
-        batch_size = 16
+        batch_size = 4
         for _ in tqdm(range(math.ceil(len(pdf_images)/batch_size))):
             image_list = pdf_images[idx:idx+batch_size]
             if not reached_references:
@@ -207,19 +129,27 @@ class TranslateApi:
                     image_list=image_list,
                     reached_references=reached_references,
                 )
-                # Merge 2 pdfs in 2 columns
-                for i, [translated_image, original_image] in enumerate(image_list):
-                    output_path = os.path.join(output_dir,f"{i:03}.pdf")
-                    fig, ax = plt.subplots(1, 2, figsize=(20, 14))
-                    cv2.imwrite(f"translated_image_{i}.png", original_image)
-                    ax[0].imshow(original_image)
-                    ax[1].imshow(translated_image)
-                    ax[0].axis("off")
-                    ax[1].axis("off")
-                    plt.tight_layout()
-                    plt.savefig(output_path, format="pdf", dpi=self.DPI)
-                    plt.close(fig)
-                    pdf_files.append(output_path)
+                if merge:
+                    # merge original and translated images into 1 page
+                    for i, [translated_image, original_image] in enumerate(image_list):
+                        output_path = os.path.join(output_dir,f"{i:03}.pdf")
+                        fig, ax = plt.subplots(1, 2, figsize=(20, 14))
+                        ax[0].imshow(original_image)
+                        ax[1].imshow(translated_image)
+                        ax[0].axis("off")
+                        ax[1].axis("off")
+                        plt.tight_layout()
+                        plt.savefig(output_path, format="pdf", dpi=self.DPI)
+                        plt.close(fig)
+                        pdf_files.append(output_path)
+                else:
+                    # convert image to pdf
+                    for i, [translated_image, _] in enumerate(image_list):
+                        output_path = os.path.join(output_dir,f"{i:03}.pdf")
+                        color_converted = cv2.cvtColor(translated_image, cv2.COLOR_BGR2RGB)
+                        pil_image = Image.fromarray(color_converted)
+                        pil_image.save(output_path)
+                        pdf_files.append(output_path)
                
         self.__merge_pdfs(pdf_files)
 
@@ -237,10 +167,25 @@ class TranslateApi:
             "AlegreyaSans-Regular.otf",
             size=self.FONT_SIZE_VIETNAMESE,
         )
+        
+        # Detection model: PubLayNet
+        self.num_classes = len(CATEGORIES2LABELS.keys())
+        self.pub_model = get_instance_segmentation_model(self.num_classes)
 
-        self.layout_model = PPStructure(table=False, ocr=False, lang="en")
+        if os.path.exists(MODEL_PATH):
+            self.checkpoint_path = MODEL_PATH
+        else:
+            raise Exception("Model weights not found.")
+
+        assert os.path.exists(self.checkpoint_path)
+        checkpoint = torch.load(self.checkpoint_path, map_location='cpu')
+        self.pub_model.load_state_dict(checkpoint['model'])
+        self.pub_model.eval()
+
+        # Recognition model: PaddleOCR
         self.ocr_model = PaddleOCR(ocr=True, lang="en", ocr_version="PP-OCRv3")
         
+        # Translation model
         self.translate_model_ja = AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-en-jap").to("cuda")
         self.translate_tokenizer_ja = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-jap")
         
@@ -251,9 +196,6 @@ class TranslateApi:
             transforms.ToPILImage(),
             transforms.ToTensor()
         ])
-        
-        # self.translate_model_vi = T5ForConditionalGeneration.from_pretrained("NlpHUST/t5-en-vi-small").to("cuda")
-        # self.translate_tokenizer_vi = T5Tokenizer.from_pretrained("NlpHUST/t5-en-vi-small")
 
     def __crop_img(self, box, ori_img):
         new_box_0 = int(box[0] / self.rat) - 20
@@ -275,23 +217,20 @@ class TranslateApi:
 
         if len(results) > 0:
             list_temp_images, list_new_boxes = np.array(results)[:,0], np.array(results)[:,1]
-            for i, image in enumerate(list_temp_images):
-                cv2.imwrite(f"output_{i}.png", image)
             
             list_ocr_results = list(map(lambda x: np.array(x)[:, 0] if len(x) > 0 else None, 
                                         list(map(lambda x: self.ocr_model(x)[1], list_temp_images))))
-            print("OCR results:", list_ocr_results)
 
             for ocr_results, box in zip(list_ocr_results, list_new_boxes):
                 if ocr_results is not None:
                     ocr_text = text = " ".join(ocr_results)
                     if len(ocr_text) > 1:
                         text = re.sub(r"\n|\t|\[|\]|\/|\|", " ", ocr_text)
-                        print("OCR merge texts:", text)
                         translated_text = self.__translate(text)
                         translated_text = re.sub(r"\n|\t|\[|\]|\/|\|", " ", translated_text)
 
-                        # if almost all characters in translated text are not japanese characters, skip
+                        # if most characters in translated text are not 
+                        # japanese characters, skip
                         if self.language == "ja":
                             if len(
                                 re.findall(
@@ -302,21 +241,19 @@ class TranslateApi:
                                 print("skipped")
                                 continue
                         
-                        # if text is too short, skip
+                        # if the text is too short, skip
                         if len(translated_text) < 20:
                             print("skipped")
                             continue
                         
-                        # for VietAI/envit5-translation
+                        # for VietAI/envit5-translation, replace "vi"
                         if self.language == "vi":
                             translated_text = translated_text.replace("vi: ", "")
                             translated_text = translated_text.replace("vi ", "")
                             translated_text = translated_text.strip()
                             
-                        print("CHECK REPETITION:",  self._repeated_substring(translated_text))
                         if self.language == "ja":
-                            if self._repeated_substring(translated_text):
-                                print("REPEATED TEXT Detected!")
+                            if self._repeated_substring(translated_text): # Check repeated substring
                                 processed_text = fw_fill_ja(
                                     text,
                                     width=int(
@@ -334,7 +271,6 @@ class TranslateApi:
                                 )
                         else:
                             if self._repeated_substring(translated_text):
-                                print("REPEATED TEXT Detected!")
                                 processed_text = fw_fill_vi(
                                     text,
                                     width=int(
@@ -351,7 +287,6 @@ class TranslateApi:
                                     + 10,
                                 )
 
-                        print("Processed_text:\n", processed_text)
                         new_block = Image.new(
                             "RGB",
                             (
@@ -392,19 +327,19 @@ class TranslateApi:
         list_images_filtered = [original_image] * len(list_boxes_filtered)
 
         results = list(map(self.__crop_img, list_boxes_filtered, list_images_filtered))
-        list_temp_images = np.array(results)[:,0]
-        list_title_ocr_results = list(map(lambda x: np.array(x)[:, 0], 
-                                    list(map(lambda x: self.ocr_model(x)[1], list_temp_images))))
-        check_title = sum([1 if result[0].lower() in ["references", "reference"] else 0 for result in list_title_ocr_results])
-        print("check_title:", check_title, list_title_ocr_results)
-        if check_title:
-            reached_references = True
+        if len(results) > 0:
+            list_temp_images = np.array(results)[:,0]
+            list_title_ocr_results = list(map(lambda x: np.array(x)[:, 0], 
+                                        list(map(lambda x: self.ocr_model(x)[1], list_temp_images))))
+            check_title = sum([1 if result[0].lower() in ["references", "reference"] else 0 for result in list_title_ocr_results])
+            if check_title:
+                reached_references = True
         
         return original_image, reached_references
     
     def __preprocess_image(self, image):
         ori_img = np.array(image)
-        img = ori_img[:, :, ::-1].copy() #cv2.imread(image_path)
+        img = ori_img[:, :, ::-1].copy()
         
         # Get the ratio to resize
         self.rat = 1000 / img.shape[0]
@@ -497,7 +432,6 @@ class TranslateApi:
                 continue
 
             translated_texts.append(res)
-        print("Translation:\n", translated_texts)
         return " ".join(translated_texts)
 
     def __split_text(self, text: str, text_limit: int = 448) -> List[str]:
@@ -550,18 +484,18 @@ class TranslateApi:
             List of paths to translated PDF files stored in
             the temp directory.
         """
-        pdf_merger = PyPDF2.PdfMerger()
-
+        result = fitz.open()
         for pdf_file in sorted(pdf_files):
-            pdf_merger.append(pdf_file)
-            os.remove(pdf_file)
-        # print("saving to..", self.temp_dir_name)
-        pdf_merger.write("outputs/translated.pdf")
+            with fitz.open(pdf_file) as f:
+                result.insert_pdf(f)
+                # os.remove(pdf_file)
+        result.save("outputs/fitz_translated.pdf")
 
 if __name__ == "__main__":
-    translate_api = TranslateApi()
-    translate_api._translate_pdf(
-        language="vi",
+    obj = TranslationLayoutRecovery()
+    obj.__translate_pdf(
+        language="ja",
         pdf_path_or_bytes="1711.07064.pdf",
         output_dir="outputs/",
+        merge=False,
     )
