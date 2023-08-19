@@ -10,7 +10,7 @@ networkx
 transformers
 sentencepiece
 paddleocr
-pdf2image
+# pdf2image
 fastapi[uvicorn]
 # PyPDF2
 matplotlib
