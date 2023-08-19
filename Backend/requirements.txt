@@ -1,9 +1,6 @@
-django==4.2.4
+Django==4.2.4
 django-cors-headers==4.2.0
 djangorestframework==3.14.0
-Pillow==10.0.0
-psycopg2==2.9.7
-pyrebase==3.0.27
-firebase==4.0.1
 firebase_admin==6.2.0
 python-dotenv==1.0.0
+psycopg2==2.9.7

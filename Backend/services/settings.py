@@ -12,9 +12,9 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 import os
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 
-load_dotenv()
+# load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -35,6 +35,7 @@ ALLOWED_HOSTS = ["*"]
 CSRF_TRUSTED_ORIGINS = ["https://*.ngrok-free.app", "https://*.127.0.0.1"]
 # CSRF_COOKIE_SECURE = True
 # CSRF_COOKIE_HTTPONLY = True
+DJANGO_ALLOWED_HOSTS='localhost 127.0.0.1 [::1]'
 # Application definition
 
 INSTALLED_APPS = [
@@ -103,20 +104,12 @@ WSGI_APPLICATION = "services.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv(
-            "DATABASE_NAME"
-        ),  # Replace with the name of your PostgreSQL database
-        "USER": os.getenv("DATABASE_USER"),  # Replace with your PostgreSQL username
-        "PASSWORD": os.getenv(
-            "DATABASE_PASSWORD"
-        ),  # Replace with your PostgreSQL password
-        "HOST": os.getenv(
-            "DATABASE_HOST"
-        ),  # Assuming the database is on the same machine
-        "PORT": os.getenv(
-            "DATABASE_PORT"
-        ),  # Leave empty to use the default port (usually 5432)
+        "ENGINE": os.environ.get("DATABASE_ENGINE"),
+        "NAME": os.environ.get("DATABASE_NAME"),
+        "USER": os.environ.get("DATABASE_USER"),
+        "PASSWORD": os.environ.get("DATABASE_PASSWORD"),
+        "HOST": os.environ.get("DATABASE_HOST"),
+        "PORT": os.environ.get("DATABASE_PORT")
     }
 }
 

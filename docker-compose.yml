@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  db:
+    container_name: 'translation-db'
+    image: postgres:13.0-alpine
+    volumes:
+      - database:/var/lib/postgresql/data/
+    env_file:
+      - ./.env.db
+    # networks:
+    #   - general-network
+  
+  backend:
+    container_name: 'translation-app'
+    build:
+      context: .
+    command: bash ./setup.sh
+    ports:
+      - 8000:8000
+    env_file:
+      - ./.env
+    volumes:
+      - .:/translation-app
+    depends_on:
+      - db
+    # networks:
+    #   - general-network
+  
+  # ngrok:
+  #   container_name: 'translation-ngrok'
+  #   image: wernight/ngrok
+  #   ports:
+  #     - 4040:4040
+  #   env_file:
+  #     - ./.env
+  #   environment:
+  #     - NGROK_AUTH=${NGROK_AUTH}
+  #   depends_on:
+  #     - backend
+  #   networks:
+  #     - general-network
+    
+volumes:
+  database:
+
+# networks:
+#   general-network:

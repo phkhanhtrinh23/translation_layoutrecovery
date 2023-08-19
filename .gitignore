@@ -164,3 +164,7 @@ ngrok.exe
 
 *firebase-adminsdk*
 
+database/
+.env*
+migrations/
+ngrok.yml
