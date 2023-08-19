@@ -8,6 +8,4 @@ urlpatterns = [
     # path("getprofile", GetProfileData.as_view()),
     path("user/<str:username>", GetUserData.as_view()),
     path("updateprofile/<str:username>", UpdateProfile.as_view()),
-    # TODO:
-    # path("<str:username>", GetUserData.as_view()),
 ]

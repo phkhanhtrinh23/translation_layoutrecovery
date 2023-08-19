@@ -15,7 +15,7 @@ urlpatterns = [
     path("translation", ProcessTranslation.as_view()), # translate pdf ...
     path('pdf/<str:username>', GetUserPDFs.as_view()), # get pdfs by username OK
     path('gettranslation', GetTranslationData.as_view()), # get translation data by translation_id
-    path('history/<str:username>', HistoryView.as_view()),  # get history by username
+    path('history/<str:username>', HistoryView.as_view()),  # get translation history by username
     # path('translations/<str:username>', GetUserTranslations.as_view()), # get translations by username
     
     path('feedback', FeedbackPDF.as_view(http_method_names=['post'])), # post feedback

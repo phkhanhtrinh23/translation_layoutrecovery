@@ -160,7 +160,7 @@ class CreatePDF(APIView):
             blob.make_public()
 
             # delete avatar just saved from avatar folder
-            os.remove(fileName)
+            # os.remove(fileName)
 
             if User.objects.filter(user_id=user_id).exists():
                 current_data = {}
@@ -196,29 +196,35 @@ class ProcessTranslation(APIView):
             if PDF.objects.filter(pdf_id=translation_data["file_input"]).exists():
                 file_input = PDF.objects.get(pdf_id=translation_data["file_input"])
 
-                # TODO: process file_output_id by using AI model and update later...
+                # TODO: process file_output by using AI model and update later...
 
                 # get file name
-                output_pdf_name = (
+                input_name = str(file_input.file_name)
+                output_name = (
                     str(file_input.file_name).split(".")[0] + "_translated.pdf"
                 )
+
+                # get language
                 original_language = file_input.language
                 target_language = translation_data["language"]
+
+                # main process...
 
                 # save file to pdf folder
                 # save_translated_file(output_pdf_name, pdf_folder)
 
                 # upload file just saved to firebase storage
-                fileName = os.path.join(pdf_folder, output_pdf_name)
+                file_name_output = os.path.join(pdf_folder, output_name)
                 bucket = storage.bucket()
-                blob = bucket.blob(output_pdf_name)
-                blob.upload_from_filename(fileName)
+                blob = bucket.blob(output_name)
+                blob.upload_from_filename(file_name_output)
 
                 # make public access from the URL
                 blob.make_public()
 
-                # delete avatar just saved from avatar folder
-                os.remove(fileName)
+                # delete original pdf and output pdf just saved from pdf folder
+                os.remove(os.path.join(pdf_folder, input_name))
+                os.remove(file_name_output)
 
                 new_pdf = PDF(
                     owner_id=file_input.owner_id,
