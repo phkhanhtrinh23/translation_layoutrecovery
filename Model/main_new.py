@@ -70,8 +70,8 @@ class TranslationLayoutRecovery:
         Tokenizer for the translation model
     """
     DPI = 300
-    FONT_SIZE_VIETNAMESE = 40
-    FONT_SIZE_JAPANESE = 32
+    FONT_SIZE_VIETNAMESE = 36
+    FONT_SIZE_JAPANESE = 28
 
     def __init__(self):
         self._load_models()
@@ -92,7 +92,7 @@ class TranslationLayoutRecovery:
                 return True
         return False
 
-    def _translate_pdf(self, pdf_path_or_bytes: Union[Path, bytes], language: str, output_dir: Path, merge: bool) -> None:
+    def _translate_pdf(self, input_path: Union[Path, bytes], language: str, output_path: Path, merge: bool) -> None:
         """Backend function for translating PDF files.
 
         Translation is performed in the following steps:
@@ -108,16 +108,16 @@ class TranslationLayoutRecovery:
 
         Parameters
         ----------
-        pdf_path_or_bytes: Union[Path, bytes]
+        input_path: Union[Path, bytes]
             Path to the input PDF file or bytes of the input PDF file
-        output_dir: Path
+        output_path: Path
             Path to the output directory
         """
-        # if isinstance(pdf_path_or_bytes, Path):
-        #     pdf_images = convert_from_path(pdf_path_or_bytes, dpi=self.DPI)
+        # if isinstance(input_path, Path):
+        #     pdf_images = convert_from_path(input_path, dpi=self.DPI)
         # else:
-        #     pdf_images = convert_from_bytes(pdf_path_or_bytes, dpi=self.DPI)
-        pdf_images = convert_from_path(pdf_path_or_bytes, dpi=self.DPI)
+        #     pdf_images = convert_from_bytes(input_path, dpi=self.DPI)
+        pdf_images = convert_from_path(input_path, dpi=self.DPI)
         print("Language:", language)
         self.language = language
         pdf_files = []
@@ -125,6 +125,7 @@ class TranslationLayoutRecovery:
         
         # Batch
         idx = 0
+        file_id = 0
         batch_size = 4
         for _ in tqdm(range(math.ceil(len(pdf_images)/batch_size))):
             image_list = pdf_images[idx:idx+batch_size]
@@ -135,25 +136,27 @@ class TranslationLayoutRecovery:
                 )
                 if merge:
                     # merge original and translated images into 1 page
-                    for i, [translated_image, original_image] in enumerate(image_list):
-                        output_path = os.path.join(output_dir,f"{i:03}.pdf")
+                    for _, [translated_image, original_image] in enumerate(image_list):
+                        saved_output_path = os.path.join(output_path,f"{file_id:03}.pdf")
                         fig, ax = plt.subplots(1, 2, figsize=(20, 14))
                         ax[0].imshow(original_image)
                         ax[1].imshow(translated_image)
                         ax[0].axis("off")
                         ax[1].axis("off")
                         plt.tight_layout()
-                        plt.savefig(output_path, format="pdf", dpi=self.DPI)
+                        plt.savefig(saved_output_path, format="pdf", dpi=self.DPI)
                         plt.close(fig)
-                        pdf_files.append(output_path)
+                        pdf_files.append(saved_output_path)
+                        file_id += 1
                 else:
                     # convert image to pdf
-                    for i, [translated_image, _] in enumerate(image_list):
-                        output_path = os.path.join(output_dir,f"{i:03}.pdf")
+                    for _, [translated_image, _] in enumerate(image_list):
+                        saved_output_path = os.path.join(output_path,f"{file_id:03}.pdf")
                         color_converted = cv2.cvtColor(translated_image, cv2.COLOR_BGR2RGB)
                         pil_image = Image.fromarray(color_converted)
-                        pil_image.save(output_path)
-                        pdf_files.append(output_path)
+                        pil_image.save(saved_output_path)
+                        pdf_files.append(saved_output_path)
+                        file_id += 1
                
         self._merge_pdfs(pdf_files)
 
@@ -202,10 +205,10 @@ class TranslationLayoutRecovery:
         ])
 
     def _crop_img(self, box, ori_img):
-        new_box_0 = int(box[0] / self.rat) - 20
-        new_box_1 = int(box[1] / self.rat) - 20
-        new_box_2 = int(box[2] / self.rat) + 20
-        new_box_3 = int(box[3] / self.rat) + 20
+        new_box_0 = int(box[0] / self.rat) - 8
+        new_box_1 = int(box[1] / self.rat) - 8
+        new_box_2 = int(box[2] / self.rat) + 8
+        new_box_3 = int(box[3] / self.rat) + 8
         temp_img = ori_img[new_box_1:new_box_3, new_box_0:new_box_2]
         box = [new_box_0, new_box_1, new_box_2, new_box_3]
         return temp_img, box
@@ -333,28 +336,26 @@ class TranslationLayoutRecovery:
         results = list(map(self._crop_img, list_boxes_filtered, list_images_filtered))
         if len(results) > 0:
             list_temp_images = np.array(results)[:,0]
-            list_title_ocr_results = list(map(lambda x: np.array(x)[:, 0], 
+            list_title_ocr_results = list(map(lambda x: np.array(x)[:, 0] if len(x) > 0 else None, 
                                         list(map(lambda x: self.ocr_model(x)[1], list_temp_images))))
             # check_title = sum([1 if result[0].lower() in ["references", "reference"] else 0 for result in list_title_ocr_results])
             # if check_title:
             #     reached_references = True
-            for i, (result, box) in enumerate(zip(list_title_ocr_results, list_boxes_filtered)):
-                if result[0].lower() in ["references", "reference"]:
-                    reached_references = True
-                elif result[0].lower() == "abstract":
-                    # Use the original Title and Authors, skip translating them
-                    new_box_1 = int(box[1] / self.rat)
-                    original_image[
-                        int(0) : int(new_box_1),
-                        int(0) : int(original_image.shape[1]),
-                    ] = ori_img[
-                        int(0) : int(new_box_1),
-                        int(0) : int(ori_img.shape[1]),
-                    ]
-                    # cv2.imwrite(f"temp_{i}.png", original_image[
-                    #     int(box[1]) : int(box[3]),
-                    #     int(box[0]) : int(box[2]),
-                    # ])
+            if len(list_title_ocr_results) > 0:
+                for i, (result, box) in enumerate(zip(list_title_ocr_results, list_boxes_filtered)):
+                    if result is not None:
+                        if result[0].lower() in ["references", "reference"]:
+                            reached_references = True
+                        elif result[0].lower() == "abstract":
+                            # Use the original Title and Authors, skip translating them
+                            new_box_1 = int(box[1] / self.rat)
+                            original_image[
+                                int(0) : int(new_box_1),
+                                int(0) : int(original_image.shape[1]),
+                            ] = ori_img[
+                                int(0) : int(new_box_1),
+                                int(0) : int(ori_img.shape[1]),
+                            ]
                     
         return original_image, reached_references
     
@@ -435,7 +436,7 @@ class TranslationLayoutRecovery:
 
         translated_texts = []
         for i, t in enumerate(texts):
-            http_res = "http" in t
+            http_res = ("http" in t) or ("https" in t)
             if not http_res:
                 if self.language == "ja":
                     inputs = self.translate_tokenizer_ja(t, return_tensors="pt").input_ids.to(
@@ -520,7 +521,7 @@ if __name__ == "__main__":
     obj = TranslationLayoutRecovery()
     obj._translate_pdf(
         language="ja",
-        pdf_path_or_bytes="1711.07064.pdf",
-        output_dir="outputs/",
+        input_path="1711.07064-1-4.pdf",
+        output_path="outputs/",
         merge=False,
     )
