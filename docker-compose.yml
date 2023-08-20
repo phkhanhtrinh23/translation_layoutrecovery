@@ -8,8 +8,8 @@ services:
       - database:/var/lib/postgresql/data/
     env_file:
       - ./.env.db
-    # networks:
-    #   - general-network
+    networks:
+      - general-network
   
   backend:
     container_name: 'translation-app'
@@ -24,25 +24,18 @@ services:
       - .:/translation-app
     depends_on:
       - db
-    # networks:
-    #   - general-network
-  
-  # ngrok:
-  #   container_name: 'translation-ngrok'
-  #   image: wernight/ngrok
-  #   ports:
-  #     - 4040:4040
-  #   env_file:
-  #     - ./.env
-  #   environment:
-  #     - NGROK_AUTH=${NGROK_AUTH}
-  #   depends_on:
-  #     - backend
-  #   networks:
-  #     - general-network
+    networks:
+      - general-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: [ '0' ]
+              capabilities: [ gpu ]
     
 volumes:
   database:
 
-# networks:
-#   general-network:
+networks:
+  general-network:

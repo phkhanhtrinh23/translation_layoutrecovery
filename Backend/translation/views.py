@@ -11,6 +11,9 @@ from translation.serializers import (
     FeedbackSerializer,
 )
 
+import shutil
+
+
 # from django.views.decorators.csrf import csrf_exempt
 from rest_framework.parsers import JSONParser
 from firebase_admin import credentials, initialize_app, storage
@@ -81,6 +84,7 @@ def save_uploaded_file(uploaded_file, destination_path):
     os.makedirs(destination_path, exist_ok=True)
 
     # Step 1: Access the file content
+    print(uploaded_file)
     file_content = uploaded_file.read()
 
     # Step 2: Choose a destination path (including filename)
@@ -219,14 +223,20 @@ class ProcessTranslation(APIView):
                 # upload file just saved to firebase storage
                 file_name_input = os.path.join(pdf_folder, input_name)
                 file_name_output = os.path.join(pdf_folder, output_name)
+                # output_name = "fitz_translated.pdf"
+                
                 
                 # TODO: process file_output by using AI model and update later...
-                obj.__translate_pdf(
+                obj.translate_pdf(
                     language=target_language,
                     input_path=file_name_input,
-                    output_path=file_name_output,
+                    output_path=pdf_folder,
                     merge=False,
                 )
+                temp_file = os.path.join(pdf_folder, "fitz_translated.pdf")
+
+                shutil.copyfile(temp_file, file_name_output)
+                os.remove(temp_file)
                 
                 bucket = storage.bucket()
                 blob = bucket.blob(output_name)
