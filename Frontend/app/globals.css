@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  h1 {
+    @apply text-3xl font-bold text-neutral-600;
+  }
+
+  h2 {
+    @apply text-2xl font-bold text-neutral-600;
+  }
+
+  h3 {
+    @apply text-xl font-bold text-neutral-600;
+  }
+
+  h4 {
+      @apply text-lg font-bold text-neutral-600;
+  }
+
+  p {
+    @apply text-neutral-800;
+  }
+
+  button {
+    @apply rounded-lg p-2 text-neutral-50 shadow-lg font-bold hover:scale-105 transition;
+  }
+
+  main {
+    @apply bg-neutral-100;
+  }
+}
+
+* {
+  margin: 0;
+  padding: 0;
+}
