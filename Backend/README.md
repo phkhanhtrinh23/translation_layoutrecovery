@@ -17,6 +17,10 @@ source env/bin/activate
 ```
 
 **Suggestion**: Using `conda` with `python=3.8` if you don't want to use Python venv.
+```
+conda create -n backend python=3.8
+conda activate backend
+```
 
 2. Install the dependencies.
 
