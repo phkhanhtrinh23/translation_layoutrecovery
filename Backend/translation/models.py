@@ -20,6 +20,16 @@ class PDF(models.Model):
         return self.file_name
 
     def save(self, *args, **kwargs):
+        """
+        Save the object to the database.
+
+        Parameters:
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+
+        Returns:
+            None
+        """
         if not self.pdf_id:
             last_pdf = PDF.objects.last()
             last_id = last_pdf.pdf_id if last_pdf else 0
@@ -29,27 +39,48 @@ class PDF(models.Model):
             print(self.file_name)
         super().save(*args, **kwargs)
 
-    def isOwner(self, id):
-        return self.owner_id.user_id == id
-
     def save_update(self):
+        """
+        Saves the current object and updates the database.
+        """
         super(PDF, self).save()
 
     def changeOwner(self, new_owner):
+        """
+        Change the owner of the object to the specified new owner.
+
+        Args:
+            new_owner (str): The ID of the new owner.
+
+        Returns:
+            None
+        """
         self.owner_id = new_owner
         self.save_update()
 
     def updateLanguage(self, new_language):
+        """
+        Update the language of the object.
+        """
         self.language = new_language
         self.save_update()
 
     def getLanguage(self):
+        """
+        Get the language of the object.
+        """
         return self.language
 
     def getOwner(self):
+        """
+        Get the owner of the object.
+        """
         return self.owner_id.user_id
 
     def getFileUrl(self):
+        """
+        Get the file URL of the object.
+        """
         return self.file
 
 
@@ -68,21 +99,39 @@ class Translation(models.Model):
         return str(self.transaction_id)
 
     def getFileInputName(self):
+        """
+        Get the file input name.
+        """
         return str(self.file_input)
 
     def getFileOutputName(self):
+        """
+        Get the file output name.
+        """
         return str(self.file_output)
 
     def getFileInput(self):
+        """
+        Get the file input.
+        """
         return self.file_input
 
     def getFileOutput(self):
+        """
+        Get the file output.
+        """
         return self.file_output
 
     def getStatus(self):
+        """
+        Get the status.
+        """
         return self.status
 
     def getTranslationData(self):
+        """
+        Get the translation data.
+        """
         return (
             str(self.file_input),
             str(self.file_output),
@@ -91,16 +140,40 @@ class Translation(models.Model):
         )
 
     def isAbleToUpdate(self):
+        """
+        Check if the translation is able to be updated.
+        """
         return self.status != 0
 
     def save_update(self):
+        """
+        Saves the current object and updates the database.
+        """
         super(PDF, self).save()
 
     def updateStatus(self, new_status):
+        """
+        Updates the status of the object.
+
+        Parameters:
+            new_status (any): The new status to be assigned.
+
+        Returns:
+            None
+        """
         self.status = new_status
         self.save_update()
 
     def updateFileOutput(self, new_file_output):
+        """
+        Updates the file output of the object.
+
+        Args:
+            new_file_output (str): The new file output to set.
+
+        Returns:
+            None
+        """
         self.file_output = new_file_output
         self.save_update()
 
@@ -119,7 +192,7 @@ class Feedback(models.Model):
     rating = models.IntegerField(default=0)
 
     def __str__(self):
-        return self.pdf_id.pdf_id + " " + str(self.rating)
+        return str(self.user_id) + " " + str(self.rating)
 
     class Meta:
         constraints = [

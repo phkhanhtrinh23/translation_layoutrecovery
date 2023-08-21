@@ -41,11 +41,27 @@ if not firebase_admin._apps:
 
 # Create your views here.
 def getAllPDFs():
+    """
+    Retrieves all the PDF objects from the database and returns them as a list.
+    
+    Returns:
+        list: A list of PDF objects.
+    """
     pdfs = list(PDF.objects.all().values())
     return pdfs
 
 
 def getUserPDFs(user_id, search=None):
+    """
+    Retrieves a list of PDFs owned by a given user.
+
+    Args:
+        user_id (int): The ID of the user.
+        search (str, optional): The search string to filter PDFs by file name. Defaults to None.
+
+    Returns:
+        list: A list of dictionaries representing the PDFs. Each dictionary contains details such as file name, owner ID, etc.
+    """
     pdfs = (
         list(PDF.objects.filter(file_name__contains=search, owner_id=user_id).values())
         if search
@@ -55,6 +71,15 @@ def getUserPDFs(user_id, search=None):
 
 
 def getUserTranslations(user_id):
+    """
+    Get the translations associated with a specific user.
+
+    Args:
+        user_id (int): The ID of the user.
+
+    Returns:
+        list: A list of translations associated with the user.
+    """
     translations = list(
         Translation.objects.filter(file_input__owner_id=user_id).values()
     )
@@ -62,6 +87,17 @@ def getUserTranslations(user_id):
 
 
 def updateOutput(translation_id, user_id, new_pdf_id):
+    """
+    Updates the output of a translation with a new PDF file.
+
+    Args:
+        translation_id (int): The ID of the translation.
+        user_id (int): The ID of the user.
+        new_pdf_id (int): The ID of the new PDF file.
+
+    Returns:
+        bool: True if the output is successfully updated, False otherwise.
+    """
     translation = Translation.objects.get(translation_id=translation_id)
     user = User.objects.get(user_id=user_id)
     new_pdf = PDF.objects.get(pdf_id=new_pdf_id)
@@ -80,6 +116,16 @@ def updateOutput(translation_id, user_id, new_pdf_id):
 
 
 def save_uploaded_file(uploaded_file, destination_path):
+    """
+    Saves an uploaded file to a specified destination path.
+
+    Parameters:
+        uploaded_file (file-like object): The uploaded file to be saved.
+        destination_path (str): The path where the file should be saved.
+
+    Returns:
+        None
+    """
     # Step 0: Check if the destination path exists, if not, create it
     os.makedirs(destination_path, exist_ok=True)
 
@@ -97,6 +143,17 @@ def save_uploaded_file(uploaded_file, destination_path):
 
 class GetUserPDFs(APIView):
     def get(self, request, *args, **kwargs):
+        """
+        Retrieves user-specific PDFs based on the provided username and query parameters.
+
+        Args:
+            request (Request): The request object.
+            args (Any): Variable length argument list.
+            kwargs (Any): Arbitrary keyword arguments.
+
+        Returns:
+            Response: The response object containing the status and data.
+        """
         try:
             username = kwargs.get("username")
             user_id = (
@@ -148,6 +205,20 @@ class GetUserPDFs(APIView):
 
 class CreatePDF(APIView):
     def post(self, request, *args, **kwargs):
+        """
+        Handles a POST request to upload a PDF file.
+
+        Parameters:
+            request (HttpRequest): The HTTP request object.
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+
+        Returns:
+            Response: The HTTP response object.
+
+        Raises:
+            Exception: If there is an error processing the request.
+        """
         try:
             pdf_data = request.data
             user_id = pdf_data["user_id"]
@@ -199,6 +270,20 @@ class CreatePDF(APIView):
 
 class ProcessTranslation(APIView):
     def post(self, request, *args, **kwargs):
+        """
+        Handles a POST request to translate a pdf file.
+
+        Parameters:
+            request (HttpRequest): The HTTP request object.
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+
+        Returns:
+            Response: The HTTP response object.
+
+        Raises:
+            Exception: If there is an error processing the request.
+        """
         translation_data = request.data
         try:
             if PDF.objects.filter(pdf_id=translation_data["file_input"]).exists():
@@ -292,6 +377,20 @@ class ProcessTranslation(APIView):
 
 class GetTranslationData(APIView):
     def post(self, request, *args, **kwargs):
+        """
+        Handles a POST request to get the translation data.
+
+        Parameters:
+            request (HttpRequest): The HTTP request object.
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+
+        Returns:
+            Response: The HTTP response object.
+
+        Raises:
+            Exception: If there is an error processing the request.
+        """
         input_data = JSONParser().parse(request)
         translation_id = input_data["translation_id"]
         try:
@@ -321,6 +420,20 @@ class GetTranslationData(APIView):
 
 class FeedbackPDF(APIView):
     def post(self, request, *args, **kwargs):
+        """
+        Handles the HTTP POST request for creating a new feedback entry.
+
+        Parameters:
+            request (HttpRequest): The HTTP request object.
+            args (tuple): Additional positional arguments.
+            kwargs (dict): Additional keyword arguments.
+
+        Returns:
+            Response: The HTTP response object containing the status and data.
+
+        Raises:
+            Exception: If there is an error while processing the request.
+        """
         try:
             data = JSONParser().parse(request)
             user_id = data["user_id"]
@@ -349,6 +462,17 @@ class FeedbackPDF(APIView):
             )
 
     def delete(self, request, *args, **kwargs):
+        """
+        Deletes a feedback entry.
+
+        Parameters:
+            request (Request): The HTTP request object.
+            args (list): Additional positional arguments.
+            kwargs (dict): Additional keyword arguments.
+
+        Returns:
+            Response: The HTTP response object.
+        """
         try:
             data = JSONParser().parse(request)
             user_id = data["user_id"]
@@ -377,6 +501,17 @@ class FeedbackPDF(APIView):
             )
 
     def get(self, request, *args, **kwargs):
+        """
+        Retrieves a list of PDF objects based on the provided user ID.
+
+        Parameters:
+            request (HttpRequest): The HTTP request object.
+            args (tuple): Any additional positional arguments.
+            kwargs (dict): Any additional keyword arguments. Should contain the "user_id" key.
+
+        Returns:
+            Response: The response object containing the list of PDF objects, or an error message if the request is invalid.
+        """
         try:
             user_id = kwargs.get("user_id")
             if User.objects.filter(user_id=user_id).exists():
@@ -399,6 +534,20 @@ class FeedbackPDF(APIView):
 
 class HistoryView(APIView):
     def get(self, request, *args, **kwargs):
+        """
+        Retrieves data for a specific user.
+
+        Parameters:
+            request (Request): The HTTP request object.
+            args (tuple): Positional arguments.
+            kwargs (dict): Keyword arguments.
+
+        Returns:
+            Response: The HTTP response object containing the retrieved data.
+
+        Raises:
+            HTTP_400_BAD_REQUEST: If the request is invalid or the user is not found.
+        """
         try:
             username = kwargs.get("username")
             if User.objects.filter(username=username).exists():

@@ -25,8 +25,41 @@ if not firebase_admin._apps:
     cred = credentials.Certificate(credential_json)
     initialize_app(cred, {'storageBucket': storage_bucket})
 
+def save_uploaded_file(uploaded_file , destination_path):
+    """
+    Save an uploaded file to a specified destination path.
+
+    Args:
+        uploaded_file (File): The uploaded file object.
+        destination_path (str): The path where the file will be saved.
+
+    Returns:
+        None
+    """
+    # Step 0: Check if the destination path exists, if not, create it
+    os.makedirs(destination_path, exist_ok=True)
+
+    # Step 1: Access the file content
+    file_content = uploaded_file.read()
+    
+    # Step 2: Choose a destination path (including filename)
+    full_destination_path = os.path.join(destination_path, uploaded_file.name)
+    
+    # Step 3: Write content to the file
+    with open(full_destination_path, 'wb') as destination_file:
+        destination_file.write(file_content)
+
 class Register(APIView):
     def post(self, request, *args, **kwargs):
+        """
+        This function handles the HTTP POST request. It receives the request object, which contains the data sent by the client. The function expects a JSON object in the request body, containing the user's full name and password. It returns a response object with the appropriate status code and data.
+
+        Parameters:
+            request: The HTTP request object containing the JSON data sent by the client.
+
+        Returns:
+            response: The HTTP response object containing the result of the POST request. If the request is valid, a success response is returned with the user data excluding the password. If the request is invalid, an error response is returned with the appropriate status code and error message.
+        """
         user_data = JSONParser().parse(request)
         profile_serializers = ProfileSerializer(
             data={"full_name": user_data["full_name"], "bio": ""}
@@ -80,6 +113,17 @@ class Register(APIView):
 
 class Login(APIView):
     def post(self, request, *args, **kwargs):
+        """
+        Handles the POST request for logging in a user.
+
+        Args:
+            request: The request object containing the user data.
+            *args: Additional positional arguments.
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            A Response object with the login status and user data.
+        """
         try:
             user_data = JSONParser().parse(request)
             user_serializers = UserSerializer(data=user_data)
@@ -116,6 +160,17 @@ class Login(APIView):
 
 class Logout(APIView):
     def post(self, request, *args, **kwargs):
+        """
+        Handles the POST request to log out a user.
+        
+        Parameters:
+            request (Request): The HTTP request object.
+            args (list): Positional arguments passed to the function.
+            kwargs (dict): Keyword arguments passed to the function.
+        
+        Returns:
+            Response: The HTTP response object containing the result of the logout operation.
+        """
         response_data = {}
         try:
             sessionid = request.data.get("sessionid")
@@ -135,6 +190,17 @@ class Logout(APIView):
 
 class GetProfileData(APIView):
     def post(self, request, *args, **kwargs):
+        """
+        Handles the HTTP POST request to retrieve profile data.
+
+        Args:
+            request (HttpRequest): The HTTP request object.
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+
+        Returns:
+            Response: The HTTP response containing the profile data.
+        """
         profile_data = JSONParser().parse(request)
         profile_id = profile_data["profile_id"]
         try:
@@ -156,7 +222,17 @@ class GetProfileData(APIView):
 
 class GetUserData(APIView):
     def post(self, request, *args, **kwargs):
-        # user_data = JSONParser().parse(request)
+        """
+        This function handles the HTTP POST request to retrieve user data.
+
+        Parameters:
+            request (HttpRequest): The HTTP request object.
+            *args (tuple): Variable length argument list.
+            **kwargs (dict): Arbitrary keyword arguments.
+
+        Returns:
+            Response: The HTTP response object containing the retrieved user data or an error message.
+        """
         username = kwargs.get("username")
         user_id = User.objects.get(username=username).user_id
         try:
@@ -180,22 +256,19 @@ class GetUserData(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-def save_uploaded_file(uploaded_file , destination_path):
-    # Step 0: Check if the destination path exists, if not, create it
-    os.makedirs(destination_path, exist_ok=True)
-
-    # Step 1: Access the file content
-    file_content = uploaded_file.read()
-    
-    # Step 2: Choose a destination path (including filename)
-    full_destination_path = os.path.join(destination_path, uploaded_file.name)
-    
-    # Step 3: Write content to the file
-    with open(full_destination_path, 'wb') as destination_file:
-        destination_file.write(file_content)
-
 class UpdateProfile(APIView):
     def post(self, request, *args, **kwargs):
+        """
+        Handles the POST request to update a user's profile data.
+
+        Parameters:
+            request (Request): The request object.
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+
+        Returns:
+            Response: The response object containing the updated profile data.
+        """
         username = kwargs.get("username")
         profile_data = request.data
         user_id = User.objects.get(username=username).user_id

@@ -169,3 +169,8 @@ database/
 migrations/
 ngrok.yml
 *.pth
+
+PDFs/
+Avatars/
+
+.vscode/

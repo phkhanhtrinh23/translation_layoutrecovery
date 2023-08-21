@@ -4,11 +4,17 @@ from django.db import models
 from django.contrib.auth.hashers import make_password, check_password
 
 
-def generate_username(email):
-    return email.split("@")[0]
-
-
 def isAbleToUpdatePassword(self, new_password):
+    """
+    Checks if the given new password is able to be updated for the current user.
+
+    Parameters:
+        self (obj): The current object instance.
+        new_password (str): The new password to be checked.
+
+    Returns:
+        bool: True if the new password is able to be updated, False otherwise.
+    """
     return (
         new_password != self.password
         and new_password != ""
@@ -18,6 +24,15 @@ def isAbleToUpdatePassword(self, new_password):
 
 
 def hash_password(password):
+    """
+    Hashes a password using the make_password function from django.contrib.auth.hashers.
+
+    Args:
+        password (str): The password to be hashed.
+
+    Returns:
+        str: The hashed password.
+    """
     return make_password(password)
 
 
@@ -34,6 +49,18 @@ class Profile(models.Model):
         return str(self.profile_id)
 
     def save(self, *args, **kwargs):
+        """
+        Save the object to the database.
+
+        This method overrides the save method of the parent class and adds functionality to automatically assign a profile ID if it is not already set. 
+
+        Parameters:
+            *args: Additional positional arguments that are passed to the parent save method.
+            **kwargs: Additional keyword arguments that are passed to the parent save method.
+
+        Returns:
+            None
+        """
         if not self.profile_id:
             last_profile = Profile.objects.last()
             last_id = last_profile.profile_id if last_profile else 0
@@ -41,9 +68,21 @@ class Profile(models.Model):
         super().save(*args, **kwargs)
 
     def getFullName(self):
+        """
+        Returns the full name of the user.
+        """
         return str(self.full_name)
 
     def updateName(self, full_name):
+        """
+        Updates the name of the profile.
+
+        Args:
+            full_name (str): The new full name for the profile.
+
+        Returns:
+            bool: True if the name was updated successfully, False otherwise.
+        """
         if full_name != "":
             self.full_name = full_name
             super(Profile, self).save()
@@ -52,6 +91,15 @@ class Profile(models.Model):
             return False
 
     def updateBio(self, bio):
+        """
+        Updates the bio of the profile.
+
+        Parameters:
+            bio (str): The new bio for the profile.
+
+        Returns:
+            bool: True if the bio is updated and saved successfully, False otherwise.
+        """
         if bio != "":
             self.bio = bio
             super(Profile, self).save()
@@ -60,6 +108,15 @@ class Profile(models.Model):
             return False
 
     def updateAvatar(self, avatar):
+        """
+        Updates the avatar of the profile.
+
+        Parameters:
+            avatar (None or str): The new avatar for the profile. If None, no avatar is set.
+
+        Returns:
+            bool: True if the avatar was updated successfully, False otherwise.
+        """
         if avatar != None:
             self.avatar = avatar
             super(Profile, self).save()
@@ -68,6 +125,9 @@ class Profile(models.Model):
             return False
 
     def getProfileData(self):
+        """
+        Returns the full name, bio, and avatar of the profile.
+        """
         return str(self.full_name), str(self.bio), self.avatar
 
 
@@ -85,6 +145,16 @@ class User(models.Model):
         return self.username
 
     def save(self, *args, **kwargs):
+        """
+        Saves the object to the database.
+
+        Parameters:
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+
+        Returns:
+            None
+        """
         if not self.user_id:
             last_user = User.objects.last()
             last_id = last_user.user_id if last_user else 0
@@ -92,18 +162,36 @@ class User(models.Model):
         super().save(*args, **kwargs)
 
     def isAuthenticated(self, username, password):
+        """
+        Checks if the given username and password are valid.
+        """
         return username == self.username and check_password(password, self.password)
 
     def getProfileId(self):
+        """
+        Returns the profile ID of the user.
+        """
         return str(self.profile_id)
 
     def updatePassword(self, new_password):
+        """
+        Updates the password for the user.
+
+        Parameters:
+            new_password (str): The new password to be set for the user.
+
+        Returns:
+            bool: True if the password was updated successfully, False otherwise.
+        """
         if isAbleToUpdatePassword(self, new_password):
-            self.password = new_password
+            self.password = hash_password(new_password)
             return True
         return False
 
     def getUserData(self):
+        """
+        Returns the username, email, full name, bio, date joined, and avatar of the user.
+        """
         full_name, bio, avatar = self.profile.getProfileData()
         return (
             str(self.username),
