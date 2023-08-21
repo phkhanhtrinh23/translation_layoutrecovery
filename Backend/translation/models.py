@@ -49,6 +49,9 @@ class PDF(models.Model):
     def getOwner(self):
         return self.owner_id.user_id
 
+    def getFileUrl(self):
+        return self.file
+
 
 class Translation(models.Model):
     translation_id = models.AutoField(primary_key=True)
@@ -65,10 +68,10 @@ class Translation(models.Model):
         return str(self.transaction_id)
 
     def getFileInputName(self):
-        return self.file_input.file_name
+        return str(self.file_input)
 
     def getFileOutputName(self):
-        return self.file_output.file_name
+        return str(self.file_output)
 
     def getFileInput(self):
         return self.file_input

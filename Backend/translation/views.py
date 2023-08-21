@@ -216,14 +216,9 @@ class ProcessTranslation(APIView):
                 target_language = translation_data["language"]
 
                 # main process...
-
-                # save file to pdf folder
-                # save_translated_file(output_pdf_name, pdf_folder)
-
                 # upload file just saved to firebase storage
                 file_name_input = os.path.join(pdf_folder, input_name)
                 file_name_output = os.path.join(pdf_folder, output_name)
-                # output_name = "fitz_translated.pdf"
                 
                 
                 # TODO: process file_output by using AI model and update later...
@@ -412,20 +407,26 @@ class HistoryView(APIView):
                 translations = list(
                     Translation.objects.filter(file_input__owner_id=user_id).values()
                 )
+                print(type(translations[0]))
                 for translation in translations:
+                    print(translation)
+                    temp_translation = Translation.objects.get(translation_id=translation["translation_id"])
                     translation_info = {
-                        "file_input": translation.getFileInputName(),
-                        "file_output": translation.getFileOutputName(),
-                        "status": translation.getStatus(),
-                        "time": translation.time_stamp,
+                        "file_input": temp_translation.getFileInputName(),
+                        "file_input_url": temp_translation.getFileInput().getFileUrl(),
+                        "file_output": temp_translation.getFileOutputName(),
+                        "file_output_url": temp_translation.getFileOutput().getFileUrl(),
+                        "status": temp_translation.getStatus(),
+                        "time": temp_translation.time_stamp,
                     }
+                    print(translation_info)
                     data.append(translation_info)
                 return Response(
                     {"status": "success", "data": data}, status=status.HTTP_200_OK
                 )
             else:
                 return Response(
-                    {"status": "error", "data": "Invalid user"},
+                    {"status": "User not found!", "data": "Invalid user"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
         except:
