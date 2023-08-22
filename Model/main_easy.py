@@ -3,30 +3,25 @@ import math
 import re
 from pathlib import Path
 from typing import List, Tuple, Union
-from paddleocr import PaddleOCR
+# from paddleocr import PaddleOCR
 import matplotlib.pyplot as plt
 import numpy as np
 from pdf2image import convert_from_bytes, convert_from_path
 from PIL import Image, ImageDraw, ImageFont
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-from Model.utils.textwrap_japanese import fw_fill_ja
-from Model.utils.textwrap_vietnamese import fw_fill_vi
+from utils import fw_fill_ja, fw_fill_vi
 import torchvision
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
+from torchvision.models.detection import MaskRCNN_ResNet50_FPN_Weights
 from torchvision.transforms import transforms
 import torch
 import random
 import cv2
 import os
 import fitz
-import logging
-
-from Backend.services.settings import MEDIA_ROOT
-
-logger = logging.getLogger('paddle')
-logger.setLevel(logging.WARN)
+import easyocr
 
 seed = 1234
 random.seed(seed)
@@ -43,9 +38,9 @@ CATEGORIES2LABELS = {
     4: "table",
     5: "figure"
 }
-MODEL_PATH = os.path.join(os.getcwd(), "model_196000.pth")
+MODEL_PATH = "model_196000.pth"
 def get_instance_segmentation_model(num_classes):
-    model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True)
+    model = torchvision.models.detection.maskrcnn_resnet50_fpn(weights=MaskRCNN_ResNet50_FPN_Weights.DEFAULT)
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
     in_features_mask = model.roi_heads.mask_predictor.conv5_mask.in_channels
@@ -67,14 +62,12 @@ class TranslationLayoutRecovery:
         Font for drawing text on the image
     ocr_model: PaddleOCR
         OCR model for detecting text in the text blocks
-    translate_model: MarianMTModel
-        Translation model for translating text
-    translate_tokenizer: MarianTokenizer
-        Tokenizer for the translation model
+    translate_model: Translation model for translating text
+    translate_tokenizer: Tokenizer for the translation model
     """
     DPI = 300
-    FONT_SIZE_VIETNAMESE = 44
-    FONT_SIZE_JAPANESE = 32
+    FONT_SIZE_VIETNAMESE = 34
+    FONT_SIZE_JAPANESE = 28
 
     def __init__(self):
         self._load_models()
@@ -95,7 +88,7 @@ class TranslationLayoutRecovery:
                 return True
         return False
 
-    def translate_pdf(self, input_path: Union[Path, bytes], language: str, output_path: Path, merge: bool) -> None:
+    def _translate_pdf(self, input_path: Union[Path, bytes], language: str, output_path: Path, merge: bool) -> None:
         """Backend function for translating PDF files.
 
         Translation is performed in the following steps:
@@ -116,10 +109,6 @@ class TranslationLayoutRecovery:
         output_path: Path
             Path to the output directory
         """
-        # if isinstance(input_path, Path):
-        #     pdf_images = convert_from_path(input_path, dpi=self.DPI)
-        # else:
-        #     pdf_images = convert_from_bytes(input_path, dpi=self.DPI)
         pdf_images = convert_from_path(input_path, dpi=self.DPI)
         print("Language:", language)
         self.language = language
@@ -160,7 +149,8 @@ class TranslationLayoutRecovery:
                         pil_image.save(saved_output_path)
                         pdf_files.append(saved_output_path)
                         file_id += 1
-               
+            idx += batch_size
+            
         self._merge_pdfs(pdf_files)
 
     def _load_models(self):
@@ -170,11 +160,11 @@ class TranslationLayoutRecovery:
         Load the layout model, OCR model, translation model and font.
         """
         self.font_ja = ImageFont.truetype(
-           os.path.join(os.getcwd(), "Source Han Serif CN Light.otf"),
+            "Source Han Serif CN Light.otf",
             size=self.FONT_SIZE_JAPANESE,
         )
         self.font_vi = ImageFont.truetype(
-            os.path.join(os.getcwd(), "AlegreyaSans-Regular.otf"),
+            "AlegreyaSans-Regular.otf",
             size=self.FONT_SIZE_VIETNAMESE,
         )
         
@@ -190,10 +180,12 @@ class TranslationLayoutRecovery:
         assert os.path.exists(self.checkpoint_path)
         checkpoint = torch.load(self.checkpoint_path, map_location='cpu')
         self.pub_model.load_state_dict(checkpoint['model'])
+        self.pub_model = self.pub_model.to("cuda")
         self.pub_model.eval()
 
         # Recognition model: PaddleOCR
-        self.ocr_model = PaddleOCR(ocr=True, lang="en", ocr_version="PP-OCRv3")
+        # self.ocr_model = PaddleOCR(ocr=True, use_gpu=True, lang="en", ocr_version="PP-OCRv4")
+        self.ocr_model = easyocr.Reader(['en'], gpu=True)
         
         # Translation model
         self.translate_model_ja = AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-en-jap").to("cuda")
@@ -201,17 +193,17 @@ class TranslationLayoutRecovery:
         
         self.translate_model_vi = AutoModelForSeq2SeqLM.from_pretrained("VietAI/envit5-translation").to("cuda")
         self.translate_tokenizer_vi = AutoTokenizer.from_pretrained("VietAI/envit5-translation")
-        
+
         self.transform = transforms.Compose([
             transforms.ToPILImage(),
             transforms.ToTensor()
         ])
 
     def _crop_img(self, box, ori_img):
-        new_box_0 = int(box[0] / self.rat) - 30
-        new_box_1 = int(box[1] / self.rat) - 30
-        new_box_2 = int(box[2] / self.rat) + 30
-        new_box_3 = int(box[3] / self.rat) + 30
+        new_box_0 = int(box[0] / self.rat) - 10
+        new_box_1 = int(box[1] / self.rat) - 10
+        new_box_2 = int(box[2] / self.rat) + 10
+        new_box_3 = int(box[3] / self.rat) + 10
         temp_img = ori_img[new_box_1:new_box_3, new_box_0:new_box_2]
         box = [new_box_0, new_box_1, new_box_2, new_box_3]
         return temp_img, box
@@ -241,15 +233,15 @@ class TranslationLayoutRecovery:
 
                         # if most characters in translated text are not 
                         # japanese characters, skip
-                        # if self.language == "ja":
-                        #     if len(
-                        #         re.findall(
-                        #             r"[^\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\u3400-\u4DBF]",
-                        #             translated_text,
-                        #         )
-                        #     ) > 0.8 * len(translated_text):
-                        #         print("skipped")
-                        #         continue
+                        if self.language == "ja":
+                            if len(
+                                re.findall(
+                                    r"[^\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\u3400-\u4DBF]",
+                                    translated_text,
+                                )
+                            ) > 0.8 * len(translated_text):
+                                print("skipped")
+                                continue
                         
                         # for VietAI/envit5-translation, replace "vi"
                         if self.language == "vi":
@@ -264,7 +256,7 @@ class TranslationLayoutRecovery:
                                     width=int(
                                         (box[2] - box[0]) / (self.FONT_SIZE_JAPANESE / 2)
                                     )
-                                    + 1,
+                                    + 5,
                                 )
                             else:
                                 processed_text = fw_fill_ja(
@@ -272,7 +264,7 @@ class TranslationLayoutRecovery:
                                     width=int(
                                         (box[2] - box[0]) / (self.FONT_SIZE_JAPANESE / 2)
                                     )
-                                    + 1,
+                                    + 5,
                                 )
                         else:
                             if self._repeated_substring(translated_text):
@@ -281,7 +273,7 @@ class TranslationLayoutRecovery:
                                     width=int(
                                         (box[2] - box[0]) / (self.FONT_SIZE_VIETNAMESE / 2)
                                     )
-                                    + 1,
+                                    + 5,
                                 )
                             else:
                                 processed_text = fw_fill_vi(
@@ -289,7 +281,7 @@ class TranslationLayoutRecovery:
                                     width=int(
                                         (box[2] - box[0]) / (self.FONT_SIZE_VIETNAMESE / 2)
                                     )
-                                    + 1,
+                                    + 5,
                                 )
 
                         new_block = Image.new(
@@ -362,7 +354,7 @@ class TranslationLayoutRecovery:
         self.rat = 1000 / img.shape[0]
 
         img = cv2.resize(img, None, fx=self.rat, fy=self.rat)
-        img = self.transform(img)
+        img = self.transform(img).to("cuda")
 
         return [img, ori_img]
     
@@ -392,7 +384,7 @@ class TranslationLayoutRecovery:
             and whether the references section has been reached.
         """
         results = list(map(self._preprocess_image, image_list))
-        new_list_images, list_original_images = np.array(results)[:,0], np.array(results)[:,1]
+        new_list_images, list_original_images = [row[0] for row in results], [row[1] for row in results]
         with torch.no_grad():
             predictions = self.pub_model(new_list_images)
 
@@ -431,7 +423,7 @@ class TranslationLayoutRecovery:
 
         translated_texts = []
         for i, t in enumerate(texts):
-            http_res = "http" in t
+            http_res = ("http" in t) or ("https" in t)
             if not http_res:
                 if self.language == "ja":
                     inputs = self.translate_tokenizer_ja(t, return_tensors="pt").input_ids.to(
@@ -509,14 +501,14 @@ class TranslationLayoutRecovery:
         for pdf_file in sorted(pdf_files):
             with fitz.open(pdf_file) as f:
                 result.insert_pdf(f)
-                # os.remove(pdf_file)
-        result.save(os.path.join(MEDIA_ROOT, "PDFs", "fitz_translated.pdf"))
+                os.remove(pdf_file)
+        result.save("outputs/fitz_translated.pdf")
 
 if __name__ == "__main__":
     obj = TranslationLayoutRecovery()
     obj._translate_pdf(
-        language="ja",
-        input_path="1711.07064-1-4.pdf",
+        language="vi",
+        input_path="2022ltr.pdf",
         output_path="outputs/",
         merge=False,
     )
