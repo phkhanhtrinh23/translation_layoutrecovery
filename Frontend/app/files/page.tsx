@@ -4,7 +4,7 @@ import Navbar from "../components/navbar";
 import InfiniteScroll from 'react-infinite-scroll-component';
 
 const Files = () => {
-    const [pdfLinks, setPdfLinks] = useState<string[]>([]);
+    const [pdfLinks, setPdfLinks] = useState([]);
     const [hasMore, setHasMore] = useState(true);
 
     useEffect(() => {
@@ -12,8 +12,10 @@ const Files = () => {
         //fetch("https://d7d2-35-91-115-21.ngrok-free.app/")
         const fetchedPdfLinks = ['https://storage.googleapis.com/avatar-a0439.appspot.com/sample.pdf', 
         '/link1.pdf', '/link2.pdf', '/link3.pdf', /* ... */
+        fetch("/files/api")
+        .then(res => res.json())
+        .then(data => setPdfLinks(data.data))
     ];
-        setPdfLinks(fetchedPdfLinks);
     }, []);
 
     const loadMore = () => {
@@ -34,10 +36,10 @@ const Files = () => {
                     endMessage={<p>No more PDFs</p>}
                 >
                     {pdfLinks.map((pdfLink, index) => {
-                        const name = pdfLink.match(/\/([^/]+)$/)[1]
+                        const name = pdfLink.file.match(/\/([^/]+)$/)[1]
                         return (
                         <div key={index} className="p-4 border-b">
-                            <a href={pdfLink} target="_blank" rel="noopener noreferrer" className="hover:text-sky-600 hover:underline">
+                            <a href={pdfLink.file} target="_blank" rel="noopener noreferrer" className="hover:text-sky-600 hover:underline">
                             {name}
                             </a>
                         </div>

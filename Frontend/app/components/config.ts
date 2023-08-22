@@ -1,3 +1,3 @@
-const HOST = "https://1ae6-35-91-115-21.ngrok-free.app";
+const HOST = "http://0.0.0.0:8000";
 
 export default HOST;

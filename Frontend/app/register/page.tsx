@@ -15,7 +15,7 @@ const Register = () => {
     })
     const registerUser = async () => {
         try {
-            const res = await fetch(HOST+'/register', {
+            const res = await fetch('/register/api', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
