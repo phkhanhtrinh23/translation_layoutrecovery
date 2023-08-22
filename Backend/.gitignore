@@ -164,13 +164,3 @@ ngrok.exe
 
 *firebase-adminsdk*
 
-database/
-.env*
-migrations/
-ngrok.yml
-*.pth
-
-PDFs/
-Avatars/
-
-.vscode/

@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  db:
+    container_name: 'translation-db'
+    image: postgres:13.0-alpine
+    volumes:
+      - database:/var/lib/postgresql/data/
+    env_file:
+      - ./.env.db
+    networks:
+      - general-network
+  
+  backend:
+    container_name: 'translation-app'
+    build:
+      context: .
+    command: bash ./setup.sh
+    ports:
+      - 8000:8000
+    env_file:
+      - ./.env
+    volumes:
+      - .:/translation-app
+    depends_on:
+      - db
+    networks:
+      - general-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: [ '0' ]
+              capabilities: [ gpu ]
+    
+volumes:
+  database:
+
+networks:
+  general-network:
