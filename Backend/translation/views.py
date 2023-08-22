@@ -244,6 +244,7 @@ class CreatePDF(APIView):
             if User.objects.filter(user_id=user_id).exists():
                 current_data = {}
                 current_data["owner_id"] = user_id
+                current_data["file_name"] = pdf_name
                 current_data["file"] = blob.public_url
                 current_data["language"] = language
                 print(len(str(current_data["file"])))
@@ -343,8 +344,10 @@ class ProcessTranslation(APIView):
                 translation_serializer = TranslationSerializer(data=current_data)
                 if translation_serializer.is_valid():
                     translation_serializer.save()
+                    current_data = translation_serializer.data
+                    current_data.update({"file_input_url": file_input.getFileUrl(), "file_output_url": new_pdf.getFileUrl()})
                     return Response(
-                        {"status": "success", "data": translation_serializer.data},
+                        {"status": "success", "data": current_data},
                         status=status.HTTP_200_OK,
                     )
                 return Response(
