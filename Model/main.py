@@ -73,24 +73,22 @@ class TranslationLayoutRecovery:
         Tokenizer for the translation model
     """
     DPI = 300
-    FONT_SIZE_VIETNAMESE = 44
-    FONT_SIZE_JAPANESE = 32
+    FONT_SIZE_VIETNAMESE = 32
+    FONT_SIZE_JAPANESE = 28
 
     def __init__(self):
         self._load_models()
 
     def _repeated_substring(self, s: str):
         n = len(s)
-        temp = s.replace("(", "")
-        temp = temp.replace(")", "")
         for i in range(10, n // 2 + 1):
-            pattern = temp[:i]
-            matches = [match for match in re.finditer(pattern, temp)]
+            pattern = s[:i]
+            matches = [match for match in re.finditer(rf'\b{re.escape(pattern)}\b', s)]
             if len(matches) >= 15:
                 return True
         for i in range(n // 2 + 11, n):
-            pattern = temp[n // 2 + 1:i]
-            matches = [match for match in re.finditer(pattern, temp)]
+            pattern = s[n // 2 + 1:i]
+            matches = [match for match in re.finditer(rf'\b{re.escape(pattern)}\b', s)]
             if len(matches) >= 15:
                 return True
         return False
@@ -116,10 +114,6 @@ class TranslationLayoutRecovery:
         output_path: Path
             Path to the output directory
         """
-        # if isinstance(input_path, Path):
-        #     pdf_images = convert_from_path(input_path, dpi=self.DPI)
-        # else:
-        #     pdf_images = convert_from_bytes(input_path, dpi=self.DPI)
         pdf_images = convert_from_path(input_path, dpi=self.DPI)
         print("Language:", language)
         self.language = language
@@ -129,7 +123,7 @@ class TranslationLayoutRecovery:
         # Batch
         idx = 0
         file_id = 0
-        batch_size = 4
+        batch_size = 8
         for _ in tqdm(range(math.ceil(len(pdf_images)/batch_size))):
             image_list = pdf_images[idx:idx+batch_size]
             if not reached_references:
@@ -160,7 +154,7 @@ class TranslationLayoutRecovery:
                         pil_image.save(saved_output_path)
                         pdf_files.append(saved_output_path)
                         file_id += 1
-               
+            idx += batch_size
         self._merge_pdfs(pdf_files)
 
     def _load_models(self):
@@ -208,10 +202,10 @@ class TranslationLayoutRecovery:
         ])
 
     def _crop_img(self, box, ori_img):
-        new_box_0 = int(box[0] / self.rat) - 30
-        new_box_1 = int(box[1] / self.rat) - 30
-        new_box_2 = int(box[2] / self.rat) + 30
-        new_box_3 = int(box[3] / self.rat) + 30
+        new_box_0 = int(box[0] / self.rat) - 20
+        new_box_1 = int(box[1] / self.rat) - 10
+        new_box_2 = int(box[2] / self.rat) + 20
+        new_box_3 = int(box[3] / self.rat) + 10
         temp_img = ori_img[new_box_1:new_box_3, new_box_0:new_box_2]
         box = [new_box_0, new_box_1, new_box_2, new_box_3]
         return temp_img, box
@@ -241,15 +235,15 @@ class TranslationLayoutRecovery:
 
                         # if most characters in translated text are not 
                         # japanese characters, skip
-                        # if self.language == "ja":
-                        #     if len(
-                        #         re.findall(
-                        #             r"[^\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\u3400-\u4DBF]",
-                        #             translated_text,
-                        #         )
-                        #     ) > 0.8 * len(translated_text):
-                        #         print("skipped")
-                        #         continue
+                        if self.language == "ja":
+                            if len(
+                                re.findall(
+                                    r"[^\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\u3400-\u4DBF]",
+                                    translated_text,
+                                )
+                            ) > 0.8 * len(translated_text):
+                                print("skipped")
+                                continue
                         
                         # for VietAI/envit5-translation, replace "vi"
                         if self.language == "vi":
@@ -509,7 +503,7 @@ class TranslationLayoutRecovery:
         for pdf_file in sorted(pdf_files):
             with fitz.open(pdf_file) as f:
                 result.insert_pdf(f)
-                # os.remove(pdf_file)
+                os.remove(pdf_file)
         result.save(os.path.join(MEDIA_ROOT, "PDFs", "fitz_translated.pdf"))
 
 if __name__ == "__main__":
