@@ -16,9 +16,6 @@ export async function POST(req: Request) {
     });
     const data = await res.json()
 
-    // let formData2 = new FormData();
-    // formData.append("file_input", data.data.pdf_id);
-    // formData.append("language", "vi");
     const res2 = await fetch(HOST+'/translation', {
         method: "POST",
         headers: {
@@ -31,4 +28,11 @@ export async function POST(req: Request) {
     })
     const data2 = res2.json();
     return NextResponse.json(data2);
+}
+
+export async function GET() {
+    const userID = cookies().get("user_id");
+    return NextResponse.json({
+        loggedIn: userID===undefined
+    })
 }
