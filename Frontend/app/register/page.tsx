@@ -4,7 +4,6 @@ import Link from "next/link";
 import Navbar from "../components/navbar";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import HOST from "../components/config";
 
 const Register = () => {
     const [userData, setUserData] = useState({

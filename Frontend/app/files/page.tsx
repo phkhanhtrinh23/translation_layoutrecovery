@@ -2,19 +2,21 @@
 import { useState, useEffect } from 'react';
 import Navbar from "../components/navbar";
 import InfiniteScroll from 'react-infinite-scroll-component';
+import { redirect } from 'next/navigation';
 
 const Files = () => {
     const [pdfLinks, setPdfLinks] = useState([]);
     const [hasMore, setHasMore] = useState(true);
 
     useEffect(() => {
-        // Simulate fetching PDF links from S3
-        //fetch("https://d7d2-35-91-115-21.ngrok-free.app/")
         const fetchedPdfLinks = ['https://storage.googleapis.com/avatar-a0439.appspot.com/sample.pdf', 
         '/link1.pdf', '/link2.pdf', '/link3.pdf', /* ... */
         fetch("/files/api")
         .then(res => res.json())
-        .then(data => setPdfLinks(data.data))
+        .then(data => {
+            if (!data.loggedIn) redirect("/login");
+            setPdfLinks(data.data)
+        })
     ];
     }, []);
 

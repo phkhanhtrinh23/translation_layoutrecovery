@@ -4,10 +4,6 @@ import Navbar from './components/navbar'
 import { useDropzone } from 'react-dropzone';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import Cookies from 'js-cookie';
-import { redirect } from 'next/navigation'
-import HOST from "./components/config";
-import { totalmem } from "os";
 import Link from "next/link";
 
 
@@ -23,7 +19,6 @@ export default function Home() {
     const files = acceptedFiles.map(file => (
         <li key={file.path}>{file.path}</li>
     ));
-    const storedUserID = Cookies.get("user_id");
     const submitFiles = async () => {
         if (acceptedFiles[0] === undefined) {
             toast("Empty file");
@@ -38,7 +33,7 @@ export default function Home() {
             })
                 .then(res => res.json())
                 .then(data => { toast(data); setPdfLink(data.data.file_output) });
-        } catch (err) { toast(err); }
+        } catch (err) { toast("Internal error, try again"); }
 
     }
     return (

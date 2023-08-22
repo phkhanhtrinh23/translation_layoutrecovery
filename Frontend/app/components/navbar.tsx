@@ -1,7 +1,7 @@
 import Link from "next/link"
 export default function Navbar() {
     return (
-        <nav className="flex flex-col h-full w-1/4 shadow-xl">
+        <nav className="flex flex-col h-full bg-neutral-50 w-1/4 drop-shadow-xl">
             <h1 className="m-4 text-sky-500">TransLayout</h1>
             <ul className="h-full">
                 <li className="hover:bg-sky-50 p-4 text-lg font-semibold"><Link href="/">Main page</Link></li>

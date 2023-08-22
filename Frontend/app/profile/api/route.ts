@@ -3,9 +3,11 @@ import { cookies } from 'next/headers'
 import { NextResponse } from "next/server";
 
 export async function GET() {
-    const res = await fetch(HOST+'/user/'+String(cookies().get("username").value), {method: "POST"});
+    const username = cookies().get("username");
+    if (username===undefined) return NextResponse.json({loggedIn: false});
+    const res = await fetch(HOST+'/user/'+String(username.value), {method: "POST"});
     const data = await res.json()
-    return NextResponse.json(data);
+    return NextResponse.json({...data, loggedIn: true});
 }
 
 export async function POST(req: Request) {
