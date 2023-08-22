@@ -5,6 +5,7 @@ import Navbar from "../components/navbar";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import HOST from "../components/config";
+import Cookies from "js-cookie";
 
 const Login = () => {
     const [userData, setUserData] = useState({
@@ -22,6 +23,20 @@ const Login = () => {
             });
             const data = await res.json()
             toast(data.status);            
+            // const res = await fetch(HOST+'/login', {
+            //     method: 'POST',
+            //     headers: {
+            //         'Content-Type': 'application/json',
+            //     },
+            //     body: JSON.stringify(userData)
+            // });
+            // const data = await res.json()
+            // console.log(data)
+            // if (data.status === "Logged in successfully") {
+            //     Cookies.set('user_id', data.data.user_id, { expires: Date.now() + 24 * 60 * 60 * 1000*7 });
+            //     Cookies.set('username', data.data.username, { expires: Date.now() + 24 * 60 * 60 * 1000*7 });
+            //     console.log(Cookies.get("user_id"));
+            // }
         } catch (err) {
             toast("Internal error, try again.");
         }

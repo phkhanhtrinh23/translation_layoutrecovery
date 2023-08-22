@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
     const body = await req.json();
-    const res = await fetch(HOST+'/login', {
+    const res = await fetch(HOST+'/register', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -12,11 +12,5 @@ export async function POST(req: Request) {
         body: JSON.stringify(body)
     });
     const data = await res.json()
-    console.log(data);
-    if (data.status === "Logged in successfully") {
-        cookies().set('user_id', data.data.user_id, { expires: Date.now() + 24 * 60 * 60 * 1000*7 });
-        cookies().set('username', data.data.username, { expires: Date.now() + 24 * 60 * 60 * 1000*7 });
-        console.log(data.data.user_id);
-    }
     return NextResponse.json(data);
 }
