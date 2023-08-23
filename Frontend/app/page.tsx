@@ -14,6 +14,7 @@ export default function Home() {
     const [loggedIn, setLoggedIn] = useState(false);
     const [loading, setLoading] = useState(false);
     const [translated, setTranslated] = useState(false);
+    const [isVie, setVie] = useState(true);
     useEffect(() => {
         fetch("/api")
             .then(res => res.json())
@@ -31,21 +32,21 @@ export default function Home() {
             toast("File must be less than 50MB");
             return;
         }
-    //     const reader = new FileReader();
+        //     const reader = new FileReader();
 
-    //   reader.onload = (event) => {
-    //     const base64Data = event.target.result.split(',')[1]; // Extracting base64 data
-    //     const jsonData = {
-    //       fileData: base64Data,
-    //       fileName: acceptedFiles[0].name,
-    //       fileType: acceptedFiles[0].type,
-    //     };
+        //   reader.onload = (event) => {
+        //     const base64Data = event.target.result.split(',')[1]; // Extracting base64 data
+        //     const jsonData = {
+        //       fileData: base64Data,
+        //       fileName: acceptedFiles[0].name,
+        //       fileType: acceptedFiles[0].type,
+        //     };
 
-    //     // Make the API call here and send jsonData to the server
-    //     console.log('JSON data:', jsonData);
-    //   };
+        //     // Make the API call here and send jsonData to the server
+        //     console.log('JSON data:', jsonData);
+        //   };
 
-    //   reader.readAsDataURL(acceptedFiles[0]);
+        //   reader.readAsDataURL(acceptedFiles[0]);
         try {
             setLoading(true);
             const formData = new FormData();
@@ -53,23 +54,23 @@ export default function Home() {
             formData.append("user_id", Cookies.get("user_id"));
             formData.append("language", "en")
             console.log(formData);
-            fetch(HOST+"/create", {
+            fetch(HOST + "/create", {
                 method: "POST",
                 body: formData
             })
-            .then(res => res.json())
-            .then(data => fetch(HOST+"/translation", {
-                method: "POST",
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    file_input: data.data.pdf_id,
-                    language: "vi"
-                })
-            }))
-            .then(res => res.json())
-            .then(data => { toast(data.status); setLoading(false); setTranslated(true) });
+                .then(res => res.json())
+                .then(data => fetch(HOST + "/translation", {
+                    method: "POST",
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        file_input: data.data.pdf_id,
+                        language: (isVie ? "vi" : "jp")
+                    })
+                }))
+                .then(res => res.json())
+                .then(data => { toast(data.status); setLoading(false); setTranslated(true) });
         } catch (err) { toast("Internal error, try again"); setLoading(false); }
     }
     return (
@@ -87,41 +88,42 @@ export default function Home() {
                         {loading && <ReactLoading type="balls" color="#38BDF8" />}
                         {translated && <Link href="/history" className="hover:text-blue-600 hover:underline px-2">Translated</Link>}
                     </div>
+                    <div>
+                        <span>Choose target language:&nbsp;</span>
+                        <button className="border border-sky-600 text-sky-600 h-fit" onClick={() => setVie(!isVie)}>{isVie ? "VI" : "JP"}</button>
+                    </div>
                 </>}
                 {/* <h1 className="text-center text-5xl text-sky-500">TransLayout</h1> */}
                 <div className="flex gap-8 md:flex-row flex-col">
                     <div>
-                    <h2 className="my-2">Introduction</h2>
-                <p>This website ensures accurate translations from English to Vietnamese/Japanese and maintains the original file layouts.
-                </p>
-                <h2 className="my-2">Technology</h2>
-                <p>The core of our app is Neural Machine Translation (NMT) and Optical Character Recognition (OCR) technologies. envit5, Helsinki-NLP/opus-mt-en-jap, and PaddleOCR model are integrated for unparalleled results. This harmonization heightens translation accuracy and extends capabilities to image-based text, revolutionizing comprehension.
-                </p>
-                <p>Moreover, our web-app is underpinned by DJango, PostgreSQL, NextJS, and TailwindCSS, creating a robust backend and an intuitive, user-centric interface.
-                </p>
-                <h2 className="my-2">How to use</h2>
-                <p>Engaging with our app involves three technical steps:
-                </p>
-                <ul>
-                    <li><p>Step 1: Upload English PDFs.
-                    </p></li>
-                    <li><p>Step 2: Initiate translation with a single click.
-                    </p></li>
-                    <li><p>Step 3: Retrieve translated documents or review historical files through the "View Files" section.
-                    </p></li>
-                    {!loggedIn && <div className="text-center mt-4">
-                    <Link href="/login"><button className="bg-sky-400 w-1/3">Sign in now</button></Link>
-                    </div>}
-                </ul>
+                        <h2 className="my-2">Introduction</h2>
+                        <p>This website ensures accurate translations from English to Vietnamese/Japanese and maintains the original file layouts.
+                        </p>
+                        <h2 className="my-2">Technology</h2>
+                        <p>The core of our app is Neural Machine Translation (NMT) and Optical Character Recognition (OCR) technologies. envit5, Helsinki-NLP/opus-mt-en-jap, and PaddleOCR model are integrated for unparalleled results. This harmonization heightens translation accuracy and extends capabilities to image-based text, revolutionizing comprehension.
+                        </p>
+                        <p>Moreover, our web-app is underpinned by DJango, PostgreSQL, NextJS, and TailwindCSS, creating a robust backend and an intuitive, user-centric interface.
+                        </p>
+                        <h2 className="my-2">How to use</h2>
+                        <p>Engaging with our app involves three technical steps:
+                        </p>
+                        <ul>
+                            <li><p>Step 1: Upload English PDFs.
+                            </p></li>
+                            <li><p>Step 2: Initiate translation with a single click.
+                            </p></li>
+                            <li><p>Step 3: Retrieve translated documents or review historical files through the "View Files" section.
+                            </p></li>
+                        </ul>
                     </div>
                     <div className="flex flex-col gap-2">
-                    <img src="1711.07064.en.vi-01.png" alt="English original" width="600"/>
-                        <img src="1711.07064v4-01.png" alt="Vietnamese translated" width="600"/>
+                        <img src="1711.07064.en.vi-01.png" alt="English original" width="600" />
+                        <img src="1711.07064v4-01.png" alt="Vietnamese translated" width="600" />
                     </div>
-                        
+
                 </div>
-                
-                
+
+
                 <ToastContainer />
             </main>
         </div>

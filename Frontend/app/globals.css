@@ -4,7 +4,7 @@
 
 @layer base {
   h1 {
-    @apply text-lg font-bold text-neutral-600 md:text-3xl;
+    @apply text-3xl font-bold text-neutral-600;
   }
 
   h2 {

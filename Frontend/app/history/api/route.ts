@@ -16,6 +16,5 @@ export async function POST(req: NextRequest) {
     else 
         res = await fetch(HOST+'/pdf/'+String(cookies().get("username").value+"?type=search&query="+body.query));
     const data = await res.json()
-    console.log(data);
     return NextResponse.json(data)
 }

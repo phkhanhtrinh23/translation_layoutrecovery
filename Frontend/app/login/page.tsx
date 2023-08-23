@@ -4,30 +4,31 @@ import Link from "next/link";
 import Navbar from "../components/navbar";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 const Login = () => {
     const [userData, setUserData] = useState({
         username: "",
         password: ""
     })
-    const loginUser = async () => {
-        try {
-            const res = await fetch('/login/api', {
+    const router = useRouter();
+    const loginUser = () => {
+        let success = false;
+            fetch('/login/api', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(userData)
-            });
-            const data = await res.json()
-            if (data.status==="Logged in successfully")
-                redirect("/")
-            toast(data.status);
-            setUserData({username: "", password: ""});
-        } catch (err) {
-            toast("Internal error, try again.");
-        }
+            })
+            .then(res => res.json())
+            .then(data => {
+                toast(data.status);
+                setUserData({username: "", password: ""});
+                if (data.status==="Logged in successfully") router.push("/");
+            })
+            .catch(err => toast("Internal error, try again."))
+            
     }
     return (
         <div className="min-h-screen flex">

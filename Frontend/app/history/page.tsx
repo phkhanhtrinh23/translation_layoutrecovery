@@ -46,10 +46,10 @@ const History = () => {
             <main className="p-4 w-full overflow-y-scroll">
                 <h2>History</h2>
                 <div className="flex gap-2 my-2">
-                    <input type="text" id="search" placeholder="Search here" className="rounded p-2 w-full"
+                    <input type="text" id="search" placeholder="Search your files here" className="rounded p-2 w-full grow"
                         value={search} onChange={e => setSearch(e.target.value)} />
                     <button className="bg-sky-600" onClick={() => getSearch()}>Search</button>
-                    <button className="bg-sky-600" onClick={() => {setSearch(""); getSearch()}}>Get All</button>
+                    <button className="bg-sky-600 whitespace-nowrap" onClick={() => {setSearch(""); getSearch()}}>Get All Files</button>
                 </div>
                 {!searching ? (pdfLinks.length ? <InfiniteScroll
                     dataLength={pdfLinks.length}
@@ -58,7 +58,7 @@ const History = () => {
                     loader={<p>Loading...</p>}
                     endMessage={<p>No more PDFs</p>}
                 >
-                    <table className="w-full text-center">
+                    <table className="w-full">
                         <tr>
                             <th>Input file</th>
                             <th>Output file</th>
@@ -90,16 +90,16 @@ const History = () => {
                             )
                         })}
                     </table>
-                </InfiniteScroll> : <p>No documents, try translating something</p>)
+                </InfiniteScroll> : <p>No records, try to translate something!</p>)
                     : (searchLinks.length ? <InfiniteScroll
                         dataLength={searchLinks.length}
                         next={loadMore}
                         hasMore={hasMore}
-                        loader={<p>Loading...</p>}
-                        endMessage={<p>No more PDFs</p>}
+                        loader={<p></p>}
+                        endMessage={<p></p>}
                     >
-                        <table className="w-full text-center">
-                            <tr>
+                        <table className="w-full">
+                            <tr className="text-left">
                                 <th>File</th>
                                 <th>Language</th>
                                 <th>Datetime</th>

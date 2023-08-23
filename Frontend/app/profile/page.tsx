@@ -81,7 +81,7 @@ const Profile = () => {
           <label>Bio</label>
           <textarea id="bio" placeholder="Enter Bio" className="rounded p-2" value={userData.bio} onChange={e => handleInputChange('bio', e.target.value)} />
 
-          <button className="bg-sky-600" onClick={() => handleSave()}>Save</button>
+          <button className="bg-sky-600 w-fit px-4" onClick={() => handleSave()}>Save</button>
           <div>
             {/* <button className="border border-sky-600 text-sky-600" onClick={()=> logout()}>Logout</button> */}
           </div>
