@@ -1,6 +1,6 @@
 import HOST from "@/app/components/config";
 import { cookies } from 'next/headers'
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: Request) {
     const body = await req.formData();
@@ -10,7 +10,7 @@ export async function POST(req: Request) {
     formData.append("language", "en");
     const res = await fetch(HOST + '/create', {
         method: "POST",
-        body: formData
+        body: formData,
     });
 
     const data = await res.json()
@@ -30,13 +30,12 @@ export async function POST(req: Request) {
 
 }
 
-export async function GET() {
-    const storedUserID = cookies().get("user_id");
-    return NextResponse.json({ loggedIn: storedUserID !== undefined });
+export async function GET(req: NextRequest) {
+    return NextResponse.json({ loggedIn: req.cookies.has("user_id") });
 }
 
-export async function DELETE() {
+export async function DELETE(req: NextRequest) {
     cookies().delete("user_id");
     cookies().delete("username");
-    return NextResponse.json({ loggedIn: false });
+    return NextResponse.json({ loggedIn: req.cookies.has("user_id") });
 }
