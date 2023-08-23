@@ -16,7 +16,7 @@ export default function Home() {
         fetch("/api")
         .then(res => res.json())
         .then(data => setLoggedIn(data.loggedIn))
-    }, [loggedIn])
+    }, [])
     const files = acceptedFiles.map(file => (
         <li key={file.path}>{file.path}</li>
     ));
