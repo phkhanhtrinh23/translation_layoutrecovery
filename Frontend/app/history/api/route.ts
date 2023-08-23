@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
     const username = cookies().get("username")
-    const res = await fetch(HOST+'/pdf/'+String(username.value+"?type=all"));
+    const res = await fetch(HOST+'/history/'+String(username.value));
     const data = await res.json()
     return NextResponse.json({...data, loggedIn: username!==undefined});
 }

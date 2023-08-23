@@ -22,6 +22,7 @@ const Register = () => {
                 body: JSON.stringify(userData)
             });
             const data = await res.json()
+            setUserData({ username: "", email: "", full_name: "", password: "" });
             toast(data.status);
         } catch (err) {
             toast("Internal error, try again.");
@@ -50,7 +51,7 @@ const Register = () => {
                     <button className="bg-sky-600" onClick={() => registerUser()}>Submit</button>
                 </div>
                 <p className="text-center">Have an account? <Link href="/login" className="text-sky-600 font-bold hover:underline">Login!</Link></p>
-                <ToastContainer/>
+                <ToastContainer />
             </main>
         </div>
     )

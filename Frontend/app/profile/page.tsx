@@ -4,7 +4,7 @@ import Navbar from "../components/navbar";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { redirect } from 'next/navigation'
-
+import Cookies from "js-cookie";
 const Profile = () => {
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [userData, setUserData] = useState({
@@ -13,6 +13,7 @@ const Profile = () => {
   });
   useEffect(() => {
     // Fetch user data from the API
+    if (Cookies.get("user_id")===undefined) redirect('/login');
     fetch("/profile/api") // Replace with your actual API endpoint
       .then(response => response.json())
       .then(data => {
@@ -20,7 +21,7 @@ const Profile = () => {
         setUserData({ fullname: data.fullname, bio: data.bio });
         setAvatarPreview(data.avatar);
       });
-  }, []);
+  }, [userData]);
 
   const handleInputChange = (field: any, value: any) => {
     setUserData(prevData => ({
@@ -57,6 +58,7 @@ const Profile = () => {
       reader.readAsDataURL(file);
     }
   };
+
   return (
     <div className="h-screen flex">
       <Navbar />
@@ -88,6 +90,7 @@ const Profile = () => {
 
           <button className="bg-sky-600" onClick={() => handleSave()}>Save</button>
           <div>
+          <button className="border border-sky-600 text-sky-600" onClick={()=> logout()}>Logout</button>
           </div>
         </div>
         <ToastContainer />
