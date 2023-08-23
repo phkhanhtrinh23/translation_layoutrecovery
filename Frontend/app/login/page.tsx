@@ -29,14 +29,17 @@ const Login = () => {
             <Navbar />
             <main className="p-4 w-full">
                 <h2>Login</h2>
-                <div className="space-y-2 flex flex-col m-8">
+                <div className="space-y-2 flex flex-col m-8 w-1/2 mx-auto">
                     <label>Username</label>
-                    <input type="text" id="username" placeholder="Enter Username" className="rounded p-2" onChange={(e) => setUserData({ ...userData, username: e.target.value })} />
+                    <input type="text" id="username" placeholder="Enter Username" className="rounded p-2 drop-shadow-lg" onChange={(e) => setUserData({ ...userData, username: e.target.value })} />
 
                     <label>Password</label>
-                    <input type="password" id="password" placeholder="Enter Password" className="rounded p-2" onChange={(e) => setUserData({ ...userData, password: e.target.value })} />
+                    <input type="password" id="password" placeholder="Enter Password" className="rounded p-2 drop-shadow-lg" onChange={(e) => setUserData({ ...userData, password: e.target.value })} />
 
-                    <button className="bg-sky-600" onClick={() => loginUser()}>Submit</button>
+                    <div className="w-full text-center">
+                        <button className="bg-sky-600 w-1/2 mt-4" onClick={() => loginUser()}>Sign in</button>
+                    </div>
+                    
                 </div>
                 <p className="text-center">Don&apos;t have an account? <Link href="/register" className="text-sky-600 font-bold hover:underline">Register!</Link></p>
             </main>

@@ -9,7 +9,8 @@ from pdf2image import convert_from_bytes, convert_from_path
 from PIL import Image, ImageDraw, ImageFont
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-from utils import fw_fill_ja, fw_fill_vi
+from Model.utils.textwrap_japanese import fw_fill_ja
+from Model.utils.textwrap_vietnamese import fw_fill_vi
 import torchvision
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
@@ -87,7 +88,7 @@ class TranslationLayoutRecovery:
                 return True
         return False
 
-    def _translate_pdf(self, input_path: Union[Path, bytes], language: str, output_path: Path, merge: bool) -> None:
+    def translate_pdf(self, input_path: Union[Path, bytes], language: str, output_path: Path, merge: bool) -> None:
         """Backend function for translating PDF files.
 
         Translation is performed in the following steps:
@@ -117,7 +118,7 @@ class TranslationLayoutRecovery:
         # Batch
         idx = 0
         file_id = 0
-        batch_size = 4
+        batch_size = 8
         for _ in tqdm(range(math.ceil(len(pdf_images)/batch_size))):
             image_list = pdf_images[idx:idx+batch_size]
             if not reached_references:
@@ -353,7 +354,7 @@ class TranslationLayoutRecovery:
         self.rat = 1000 / img.shape[0]
 
         img = cv2.resize(img, None, fx=self.rat, fy=self.rat)
-        img = self.transform(img)
+        img = self.transform(img).cuda()
 
         return [img, ori_img]
     
@@ -505,7 +506,7 @@ class TranslationLayoutRecovery:
 
 if __name__ == "__main__":
     obj = TranslationLayoutRecovery()
-    obj._translate_pdf(
+    obj.translate_pdf(
         language="ja",
         input_path="1711.07064-1-4.pdf",
         output_path="outputs/",

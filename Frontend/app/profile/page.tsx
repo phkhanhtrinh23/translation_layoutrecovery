@@ -75,10 +75,10 @@ const Profile = () => {
             />
           </label>
           <label>Full Name</label>
-          <input type="text" id="fullname" placeholder="Enter Full Name" className="rounded p-2" value={userData.full_name} onChange={e => handleInputChange('full_name', e.target.value)} />
+          <input type="text" id="fullname" placeholder="Enter Full Name" className="rounded p-2 drop-shadow-lg" value={userData.full_name} onChange={e => handleInputChange('full_name', e.target.value)} />
 
           <label>Bio</label>
-          <textarea id="bio" placeholder="Enter Bio" className="rounded p-2" value={userData.bio} onChange={e => handleInputChange('bio', e.target.value)} />
+          <textarea id="bio" placeholder="Enter Bio" className="rounded p-2 drop-shadow-lg" value={userData.bio} onChange={e => handleInputChange('bio', e.target.value)} />
 
           <button className="bg-sky-600 w-fit px-4" onClick={() => handleSave()}>Save</button>
           <div>
