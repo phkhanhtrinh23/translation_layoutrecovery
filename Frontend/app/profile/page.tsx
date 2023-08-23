@@ -32,7 +32,7 @@ const Profile = () => {
     formData.append("bio", userData.bio);
     formData.append("avatar", avatarPreview);
     fetch("/profile/api", {
-      method: 'POST',
+      method: 'UPDATE',
       body: formData
     })
       .then(res => res.json())
