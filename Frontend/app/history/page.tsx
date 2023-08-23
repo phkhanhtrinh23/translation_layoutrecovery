@@ -16,7 +16,8 @@ const History = () => {
             .then(res => res.json())
             .then(data => {
                 if (!data.loggedIn) redirect("/login");
-                setPdfLinks(data.data)
+                if (data.status==="success") 
+                    setPdfLinks(data.data)
             })
     }, []);
 

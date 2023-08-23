@@ -32,10 +32,10 @@ DEBUG = True
 ALLOWED_HOSTS = ["*"]
 
 # for instant deploying the website using ngrok platform
-CSRF_TRUSTED_ORIGINS = ["https://*.ngrok-free.app", "https://*.127.0.0.1"]
+CSRF_TRUSTED_ORIGINS = ["https://*.ngrok-free.app", "http://*.127.0.0.1", "http://0.0.0.0"]
 # CSRF_COOKIE_SECURE = True
 # CSRF_COOKIE_HTTPONLY = True
-DJANGO_ALLOWED_HOSTS='localhost 127.0.0.1 [::1]'
+DJANGO_ALLOWED_HOSTS='localhost 127.0.0.1 [::1] 0.0.0.0'
 # Application definition
 
 INSTALLED_APPS = [

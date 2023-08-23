@@ -6,6 +6,8 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Link from "next/link";
 import ReactLoading from 'react-loading';
+import Cookies from "js-cookie";
+import HOST from "./components/config";
 
 export default function Home() {
     const { acceptedFiles, getRootProps, getInputProps } = useDropzone();
@@ -29,16 +31,45 @@ export default function Home() {
             toast("File must be less than 50MB");
             return;
         }
+    //     const reader = new FileReader();
+
+    //   reader.onload = (event) => {
+    //     const base64Data = event.target.result.split(',')[1]; // Extracting base64 data
+    //     const jsonData = {
+    //       fileData: base64Data,
+    //       fileName: acceptedFiles[0].name,
+    //       fileType: acceptedFiles[0].type,
+    //     };
+
+    //     // Make the API call here and send jsonData to the server
+    //     console.log('JSON data:', jsonData);
+    //   };
+
+    //   reader.readAsDataURL(acceptedFiles[0]);
         try {
             setLoading(true);
             const formData = new FormData();
             formData.append("file", acceptedFiles[0]);
-            fetch("/api", {
-                method: 'POST',
+            formData.append("user_id", Cookies.get("user_id"));
+            formData.append("language", "en")
+            console.log(formData);
+            fetch(HOST+"/create", {
+                method: "POST",
                 body: formData
             })
-                .then(res => res.json())
-                .then(data => { toast(data.status); setLoading(false); setTranslated(true) });
+            .then(res => res.json())
+            .then(data => fetch(HOST+"/translation", {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    file_input: data.data.pdf_id,
+                    language: "vi"
+                })
+            }))
+            .then(res => res.json())
+            .then(data => { toast(data.status); setLoading(false); setTranslated(true) });
         } catch (err) { toast("Internal error, try again"); setLoading(false); }
     }
     return (
