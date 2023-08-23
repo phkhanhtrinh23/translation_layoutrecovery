@@ -194,38 +194,6 @@ class Logout(APIView):
         return Response(response_data, status=status.HTTP_200_OK)
 
 
-class GetProfileData(APIView):
-    def post(self, request, *args, **kwargs):
-        """
-        Handles the HTTP POST request to retrieve profile data.
-
-        Args:
-            request (HttpRequest): The HTTP request object.
-            *args: Variable length argument list.
-            **kwargs: Arbitrary keyword arguments.
-
-        Returns:
-            Response: The HTTP response containing the profile data.
-        """
-        profile_data = JSONParser().parse(request)
-        profile_id = profile_data["profile_id"]
-        try:
-            full_name, bio, avatar = Profile.objects.filter(profile_id=profile_id).getProfileData()
-            response_data = {}
-            response_data["full_name"] = full_name
-            response_data["bio"] = bio
-            response_data["avatar"] = avatar
-            return Response(
-                {"status": "Got profile data successfully!", "data": response_data},
-                status=status.HTTP_200_OK,
-            )
-        except Profile.DoesNotExist:
-            return Response(
-                {"status": "error", "data": "This profile does not exist!"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-
 class GetUserData(APIView):
     def post(self, request, *args, **kwargs):
         """

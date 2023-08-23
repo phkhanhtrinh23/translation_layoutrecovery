@@ -27,14 +27,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = "django-insecure-3e$y!xq_wvo%4u7d5m9w7e*ptetlyi_pnm#@ipxa$7+ly$_j=g"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ["*"]
 
 # for instant deploying the website using ngrok platform
 CSRF_TRUSTED_ORIGINS = ["https://*.ngrok-free.app", "http://*.127.0.0.1", "http://0.0.0.0"]
-# CSRF_COOKIE_SECURE = True
-# CSRF_COOKIE_HTTPONLY = True
+
 DJANGO_ALLOWED_HOSTS='localhost 127.0.0.1 [::1] 0.0.0.0'
 # Application definition
 
@@ -159,17 +158,6 @@ STATIC_ROOT = os.path.join(os.path.dirname(BASE_DIR), "static_cdn", "static_root
 # DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 
-
-# STATICFILES_DIRS = [
-#     os.path.join(BASE_DIR, "static"),
-# ]
-
-# MESSAGE_TAGS = {
-#     messages.ERROR: "danger",
-# }
-
-# MEDIA_URL = '/media/'
-# MEDIA_ROOT = os.path.join(BASE_DIR, 'content')
 MEDIA_ROOT = BASE_DIR / "media"
 MEDIA_URL = ""
 

@@ -2,7 +2,6 @@ from django.db import models
 from account.models import User
 
 
-# Create your models here.
 class PDF(models.Model):
     pdf_id = models.AutoField(primary_key=True, unique=True)
     owner_id = models.ForeignKey(

@@ -182,27 +182,6 @@ class GetUserPDFs(APIView):
             )
 
 
-# class GetUserTranslations(APIView):
-#     def get(self, request, *args, **kwargs):
-#         try:
-#             username = kwargs.get("username")
-#             user_id = (
-#                 User.objects.filter(username=username)
-#                 .values("user_id")
-#                 .first()["user_id"]
-#             )
-#             ans = getUserTranslations(user_id)
-#             return Response(
-#                 {"status": "success", "data": ans}, status=status.HTTP_200_OK
-#             )
-#         except Exception as e:
-#             print(e)
-#             return Response(
-#                 {"status": "error", "data": "Invalid request"},
-#                 status=status.HTTP_400_BAD_REQUEST,
-#             )
-
-
 class CreatePDF(APIView):
     def post(self, request, *args, **kwargs):
         """

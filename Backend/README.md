@@ -1,5 +1,4 @@
 ## To do list
-- [ ] Handle file size (max ~= 50MB).
 - [ ] Host db on server using Docker.
 - [ ] Calculate time execution.
 
