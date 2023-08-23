@@ -7,28 +7,22 @@ import 'react-toastify/dist/ReactToastify.css';
 import { useRouter } from "next/navigation";
 
 const Login = () => {
-    const [userData, setUserData] = useState({
-        username: "",
-        password: ""
-    })
+    const [userData, setUserData] = useState({ username: "", password: "" })
     const router = useRouter();
     const loginUser = () => {
-        let success = false;
-            fetch('/login/api', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(userData)
-            })
+        fetch('/login/api', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', },
+            body: JSON.stringify(userData)
+        })
             .then(res => res.json())
             .then(data => {
                 toast(data.status);
-                setUserData({username: "", password: ""});
-                if (data.status==="Logged in successfully") router.push("/");
+                setUserData({ username: "", password: "" });
+                if (data.status === "Logged in successfully") router.push("/");
             })
             .catch(err => toast("Internal error, try again."))
-            
+
     }
     return (
         <div className="min-h-screen flex">
@@ -46,7 +40,7 @@ const Login = () => {
                 </div>
                 <p className="text-center">Don&apos;t have an account? <Link href="/register" className="text-sky-600 font-bold hover:underline">Register!</Link></p>
             </main>
-            <ToastContainer/>
+            <ToastContainer />
         </div>
     )
 }

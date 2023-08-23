@@ -22,9 +22,7 @@ const History = () => {
     }, []);
 
     const loadMore = () => {
-        // Simulate loading more PDF links
-        // In a real scenario, you might fetch more links from S3
-        setHasMore(hasMore); // Set to true if more links are available
+        setHasMore(hasMore);
     };
 
     const getSearch = () => {
