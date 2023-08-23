@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ ...data, loggedIn: req.cookies.has("user_id") });
 }
 
-export async function UPDATE(req: Request) {
+export async function PUT(req: Request) {
   const body = await req.formData();
   const res = await fetch(HOST + '/updateprofile/' + String(cookies().get("username").value), {
     method: 'POST',

@@ -5,7 +5,7 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { redirect } from 'next/navigation'
 const Profile = () => {
-  const [avatarPreview, setAvatarPreview] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState("");
   const [userData, setUserData] = useState({
     full_name: '',
     bio: '',
@@ -17,7 +17,7 @@ const Profile = () => {
       .then(data => {
         if (!data.loggedIn) redirect("/login");
         setUserData({ full_name: data.data.full_name, bio: data.data.bio, avatar: data.data.avatar });
-        setAvatarPreview(data.data.avatar);
+        setAvatarPreview(data.data.avatar+"?_="+(new Date()).getTime());
       });
   }, []);
 
@@ -26,13 +26,12 @@ const Profile = () => {
   };
 
   const handleSave = () => {
-    // Send updated user data to the API for saving
     const formData = new FormData();
     formData.append("full_name", userData.full_name);
     formData.append("bio", userData.bio);
     formData.append("avatar", avatarPreview);
     fetch("/profile/api", {
-      method: 'UPDATE',
+      method: 'PUT',
       body: formData
     })
       .then(res => res.json())
@@ -62,7 +61,7 @@ const Profile = () => {
             className="w-20 h-20 rounded-full bg-gray-200 cursor-pointer flex items-center justify-center overflow-hidden"
           >
             <img
-              src={avatarPreview || '/avatar-placeholder.jpg'}
+              src={avatarPreview || "/placeholder.png"}
               alt="Avatar"
               className="rounded-full w-full h-full object-cover"
             />
