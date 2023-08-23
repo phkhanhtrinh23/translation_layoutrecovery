@@ -76,7 +76,7 @@ const Profile = () => {
             />
           </label>
           <label>Full Name</label>
-          <input type="text" id="fullname" placeholder="Enter Full Name" className="rounded p-2" value={userData.full_name} onChange={e => handleInputChange('fullname', e.target.value)} />
+          <input type="text" id="fullname" placeholder="Enter Full Name" className="rounded p-2" value={userData.full_name} onChange={e => handleInputChange('full_name', e.target.value)} />
 
           <label>Bio</label>
           <textarea id="bio" placeholder="Enter Bio" className="rounded p-2" value={userData.bio} onChange={e => handleInputChange('bio', e.target.value)} />
