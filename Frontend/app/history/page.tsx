@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation';
 import { ToastContainer, toast } from 'react-toastify';
 const History = () => {
     const [pdfLinks, setPdfLinks] = useState([]);
-    const [hasMore, setHasMore] = useState(true);
+    const [hasMore, setHasMore] = useState(false);
     const [search, setSearch] = useState("");
     const [searching, setSearching] = useState(false);
     const [searchLinks, setSearchLinks] = useState([]);
@@ -47,8 +47,9 @@ const History = () => {
                 <h2>History</h2>
                 <div className="flex gap-2 my-2">
                     <input type="text" id="search" placeholder="Search here" className="rounded p-2 w-full"
-                        onChange={e => setSearch(e.target.value)} />
+                        value={search} onChange={e => setSearch(e.target.value)} />
                     <button className="bg-sky-600" onClick={() => getSearch()}>Search</button>
+                    <button className="bg-sky-600" onClick={() => {setSearch(""); getSearch()}}>Get All</button>
                 </div>
                 {!searching ? (pdfLinks.length ? <InfiniteScroll
                     dataLength={pdfLinks.length}

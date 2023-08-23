@@ -4,6 +4,7 @@ import Link from "next/link";
 import Navbar from "../components/navbar";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { redirect } from "next/navigation";
 
 const Login = () => {
     const [userData, setUserData] = useState({
@@ -20,6 +21,8 @@ const Login = () => {
                 body: JSON.stringify(userData)
             });
             const data = await res.json()
+            if (data.status==="Logged in successfully")
+                redirect("/")
             toast(data.status);
             setUserData({username: "", password: ""});
         } catch (err) {
