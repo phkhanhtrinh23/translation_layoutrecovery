@@ -42,16 +42,18 @@ def save_uploaded_file(uploaded_file , destination_path, file_name):
     os.makedirs(destination_path, exist_ok=True)
 
     # Step 1: Choose a destination path (including filename)
-    full_destination_path = os.path.join(destination_path, file_name)
+    full_destination_path = os.path.join(destination_path, str(file_name) + ".png")
 
     # Step 3: Decode the string base64 to an image
     # Remove the 'data:image/jpeg;base64,' prefix and decode the image data
-    _, context = context.split(",", 1)
-    image_64_decode = base64.b64decode(context)
+    _, uploaded_file = uploaded_file.split(",", 1)
+    image_64_decode = base64.b64decode(uploaded_file)
 
     # Step 4: create a writable image and write the decoding result
     image_result = open(full_destination_path, "wb")
     image_result.write(image_64_decode)
+
+    return full_destination_path
 
 class Register(APIView):
     def post(self, request, *args, **kwargs):
@@ -282,13 +284,12 @@ class UpdateProfile(APIView):
         print(avatar)
         try:
             profile = User.objects.get(user_id=user_id).profile
-            img_name = str(avatar)
+            img_name = str(username) + ".png"
 
             # save the avatar file to avatar folder
-            save_uploaded_file(avatar, avatar_folder, username)
+            fileName = save_uploaded_file(avatar, avatar_folder, username)
 
             # Put your local file path 
-            fileName = os.path.join(avatar_folder, img_name)
             bucket = storage.bucket()
             blob = bucket.blob(img_name)
             blob.upload_from_filename(fileName)
