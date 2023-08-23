@@ -277,37 +277,40 @@ class UpdateProfile(APIView):
         """
         username = kwargs.get("username")
         profile_data = request.data
+        print(profile_data)
         user_id = User.objects.get(username=username).user_id
         full_name = profile_data["full_name"]
         bio = profile_data["bio"]
         avatar = profile_data["avatar"]
-        print(avatar)
+        print(type(avatar))
         try:
             profile = User.objects.get(user_id=user_id).profile
-            img_name = str(username) + ".png"
+            response_data = {}
+            response_data["avatar"] = avatar
+            if "https" not in avatar:
+                img_name = str(username) + ".png"
 
-            # save the avatar file to avatar folder
-            fileName = save_uploaded_file(avatar, avatar_folder, username)
+                # save the avatar file to avatar folder
+                fileName = save_uploaded_file(avatar, avatar_folder, username)
 
-            # Put your local file path 
-            bucket = storage.bucket()
-            blob = bucket.blob(img_name)
-            blob.upload_from_filename(fileName)
+                # Put your local file path 
+                bucket = storage.bucket()
+                blob = bucket.blob(img_name)
+                blob.upload_from_filename(fileName)
 
-            # make public access from the URL
-            blob.make_public()
+                # make public access from the URL
+                blob.make_public()
 
-            # delete avatar just saved from avatar folder
-            os.remove(fileName)
+                # delete avatar just saved from avatar folder
+                os.remove(fileName)
+                response_data["avatar"] = blob.public_url
+                profile.updateAvatar(blob.public_url)
 
             profile.updateName(full_name)
             profile.updateBio(bio)
-            profile.updateAvatar(blob.public_url)
 
-            response_data = {}
             response_data["full_name"] = full_name
             response_data["bio"] = bio
-            response_data["avatar"] = blob.public_url
             print(response_data["avatar"])
             
 
