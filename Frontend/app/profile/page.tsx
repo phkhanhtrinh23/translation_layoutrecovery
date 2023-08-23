@@ -4,48 +4,41 @@ import Navbar from "../components/navbar";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { redirect } from 'next/navigation'
-import Cookies from "js-cookie";
 const Profile = () => {
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [userData, setUserData] = useState({
-    fullname: '',
-    bio: ''
+    full_name: '',
+    bio: '',
+    avatar: ''
   });
   useEffect(() => {
     // Fetch user data from the API
-    if (Cookies.get("user_id")===undefined) redirect('/login');
     fetch("/profile/api") // Replace with your actual API endpoint
       .then(response => response.json())
       .then(data => {
         if (!data.loggedIn) redirect("/login");
-        setUserData({ fullname: data.fullname, bio: data.bio });
-        setAvatarPreview(data.avatar);
+        setUserData({ full_name: data.data.full_name, bio: data.data.bio, avatar: data.data.avatar });
+        setAvatarPreview(data.data.avatar);
       });
-  }, [userData]);
+  }, []);
 
   const handleInputChange = (field: any, value: any) => {
-    setUserData(prevData => ({
-      ...prevData,
-      [field]: value
-    }));
+    setUserData({ ...userData, [field]: value });
   };
 
   const handleSave = () => {
     // Send updated user data to the API for saving
-    fetch("/api/profile", {
+    const formData = new FormData();
+    formData.append("full_name", userData.full_name);
+    formData.append("bio", userData.bio);
+    formData.append("avatar", avatarPreview);
+    fetch("/profile/api", {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        fullname: userData.fullname,
-        bio: userData.bio,
-        avatar: avatarPreview
-      })
+      body: formData
     })
-      .then(response => response.json())
+      .then(res => res.json())
       .then(data => toast(data.status))
-      .catch(err => toast(err));
+      .catch(err => toast("Internal error, try again!"));
   };
 
   const previewImage = (input: any) => {
@@ -60,7 +53,7 @@ const Profile = () => {
   };
 
   return (
-    <div className="h-screen flex">
+    <div className="min-h-screen flex">
       <Navbar />
       <main className="p-4 w-full">
         <h2>Profile</h2>
@@ -83,14 +76,14 @@ const Profile = () => {
             />
           </label>
           <label>Full Name</label>
-          <input type="text" id="fullname" placeholder="Enter Full Name" className="rounded p-2" value={userData.fullname} onChange={e => handleInputChange('fullname', e.target.value)} />
+          <input type="text" id="fullname" placeholder="Enter Full Name" className="rounded p-2" value={userData.full_name} onChange={e => handleInputChange('fullname', e.target.value)} />
 
           <label>Bio</label>
           <textarea id="bio" placeholder="Enter Bio" className="rounded p-2" value={userData.bio} onChange={e => handleInputChange('bio', e.target.value)} />
 
           <button className="bg-sky-600" onClick={() => handleSave()}>Save</button>
           <div>
-          <button className="border border-sky-600 text-sky-600" onClick={()=> logout()}>Logout</button>
+            {/* <button className="border border-sky-600 text-sky-600" onClick={()=> logout()}>Logout</button> */}
           </div>
         </div>
         <ToastContainer />

@@ -31,7 +31,7 @@ const Register = () => {
     }
 
     return (
-        <div className="h-screen flex">
+        <div className="min-h-screen flex">
             <Navbar />
             <main className="p-4 w-full">
                 <h2>Register</h2>
