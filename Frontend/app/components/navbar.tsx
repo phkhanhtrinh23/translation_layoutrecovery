@@ -26,7 +26,8 @@ export default function Navbar() {
                     <li className="hover:bg-sky-50 p-4 text-lg font-semibold"><Link href="/login">Sign in</Link></li>
                 </>}
             </ul>
-            <p className="p-4"><b>Pro tip:</b> You can sign in to save your translated documents for later editing</p>
+            {!loggedIn && <p className="p-4"><b>Pro tip:</b> You can sign in to save your translated documents for later editing</p>}
+            
         </nav>
     )
 }

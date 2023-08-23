@@ -34,6 +34,7 @@ export default function Home() {
         }
         try {
             setLoading(true);
+            setTranslated(false);
             const formData = new FormData();
             formData.append("file", acceptedFiles[0]);
             formData.append("user_id", Cookies.get("user_id"));
@@ -75,7 +76,7 @@ export default function Home() {
                     </div>
                     <div>
                         <span>Choose target language:&nbsp;</span>
-                        <button className="border border-sky-600 text-sky-600 h-fit" onClick={() => setVie(!isVie)}>{isVie ? "VI" : "JA"}</button>
+                        <button className="border border-sky-600 text-sky-600 h-fit" onClick={() => setVie(!isVie)}>{isVie ? "Vietnamese" : "Japanese"}</button>
                     </div>
                 </>}
                 <div className="flex gap-8 md:flex-row flex-col">
@@ -84,9 +85,9 @@ export default function Home() {
                         <p>This website ensures accurate translations from English to Vietnamese/Japanese and maintains the original file layouts.
                         </p>
                         <h2 className="my-2">Technology</h2>
-                        <p>The core of our app is Neural Machine Translation (NMT) and Optical Character Recognition (OCR) technologies. envit5, Helsinki-NLP/opus-mt-en-jap, and PaddleOCR model are integrated for unparalleled results. This harmonization heightens translation accuracy and extends capabilities to image-based text, revolutionizing comprehension.
+                        <p>The core of our app is Neural Machine Translation (NMT) and Optical Character Recognition (OCR) technologies. envit5, Helsinki-NLP/opus-mt-en-jap, and EasyOCR model are integrated for unparalleled results. This harmonization heightens translation accuracy and extends capabilities to image-based text, revolutionizing comprehension.
                         </p>
-                        <p>Moreover, our web-app is underpinned by DJango, PostgreSQL, NextJS, and TailwindCSS, creating a robust backend and an intuitive, user-centric interface.
+                        <p>Moreover, our web-app is underpinned by Django, PostgreSQL, NextJS, and TailwindCSS, creating a robust backend and an intuitive, user-centric interface.
                         </p>
                         <h2 className="my-2">How to use</h2>
                         <p>Engaging with our app involves three technical steps:
