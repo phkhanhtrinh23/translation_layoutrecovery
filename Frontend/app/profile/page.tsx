@@ -12,8 +12,7 @@ const Profile = () => {
     avatar: ''
   });
   useEffect(() => {
-    // Fetch user data from the API
-    fetch("/profile/api") // Replace with your actual API endpoint
+    fetch("/profile/api")
       .then(response => response.json())
       .then(data => {
         if (!data.loggedIn) redirect("/login");
@@ -83,7 +82,6 @@ const Profile = () => {
 
           <button className="bg-sky-600 w-fit px-4" onClick={() => handleSave()}>Save</button>
           <div>
-            {/* <button className="border border-sky-600 text-sky-600" onClick={()=> logout()}>Logout</button> */}
           </div>
         </div>
         <ToastContainer />

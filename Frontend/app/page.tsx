@@ -32,21 +32,6 @@ export default function Home() {
             toast("File must be less than 50MB");
             return;
         }
-        //     const reader = new FileReader();
-
-        //   reader.onload = (event) => {
-        //     const base64Data = event.target.result.split(',')[1]; // Extracting base64 data
-        //     const jsonData = {
-        //       fileData: base64Data,
-        //       fileName: acceptedFiles[0].name,
-        //       fileType: acceptedFiles[0].type,
-        //     };
-
-        //     // Make the API call here and send jsonData to the server
-        //     console.log('JSON data:', jsonData);
-        //   };
-
-        //   reader.readAsDataURL(acceptedFiles[0]);
         try {
             setLoading(true);
             const formData = new FormData();
@@ -93,7 +78,6 @@ export default function Home() {
                         <button className="border border-sky-600 text-sky-600 h-fit" onClick={() => setVie(!isVie)}>{isVie ? "VI" : "JA"}</button>
                     </div>
                 </>}
-                {/* <h1 className="text-center text-5xl text-sky-500">TransLayout</h1> */}
                 <div className="flex gap-8 md:flex-row flex-col">
                     <div>
                         <h2 className="my-2">Introduction</h2>
@@ -108,12 +92,9 @@ export default function Home() {
                         <p>Engaging with our app involves three technical steps:
                         </p>
                         <ul>
-                            <li><p>Step 1: Upload English PDFs.
-                            </p></li>
-                            <li><p>Step 2: Initiate translation with a single click.
-                            </p></li>
-                            <li><p>Step 3: Retrieve translated documents or review historical files through the "View Files" section.
-                            </p></li>
+                            <li><p>Step 1: Upload English PDFs.</p></li>
+                            <li><p>Step 2: Initiate translation with a single click.</p></li>
+                            <li><p>Step 3: Retrieve translated documents or review historical files through the "View Files" section.</p></li>
                         </ul>
                     </div>
                     <div className="flex flex-col gap-2">
