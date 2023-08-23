@@ -11,6 +11,8 @@ from firebase_admin import credentials, initialize_app, storage
 import firebase_admin
 from dotenv import load_dotenv
 from django.conf import settings
+from PIL import Image
+import base64
 
 # Load the environment variables from the .env file
 load_dotenv()
@@ -25,7 +27,7 @@ if not firebase_admin._apps:
     cred = credentials.Certificate(credential_json)
     initialize_app(cred, {'storageBucket': storage_bucket})
 
-def save_uploaded_file(uploaded_file , destination_path):
+def save_uploaded_file(uploaded_file , destination_path, file_name):
     """
     Save an uploaded file to a specified destination path.
 
@@ -39,15 +41,17 @@ def save_uploaded_file(uploaded_file , destination_path):
     # Step 0: Check if the destination path exists, if not, create it
     os.makedirs(destination_path, exist_ok=True)
 
-    # Step 1: Access the file content
-    file_content = uploaded_file.read()
-    
-    # Step 2: Choose a destination path (including filename)
-    full_destination_path = os.path.join(destination_path, uploaded_file.name)
-    
-    # Step 3: Write content to the file
-    with open(full_destination_path, 'wb') as destination_file:
-        destination_file.write(file_content)
+    # Step 1: Choose a destination path (including filename)
+    full_destination_path = os.path.join(destination_path, file_name)
+
+    # Step 3: Decode the string base64 to an image
+    # Remove the 'data:image/jpeg;base64,' prefix and decode the image data
+    _, context = context.split(",", 1)
+    image_64_decode = base64.b64decode(context)
+
+    # Step 4: create a writable image and write the decoding result
+    image_result = open(full_destination_path, "wb")
+    image_result.write(image_64_decode)
 
 class Register(APIView):
     def post(self, request, *args, **kwargs):
@@ -275,12 +279,13 @@ class UpdateProfile(APIView):
         full_name = profile_data["full_name"]
         bio = profile_data["bio"]
         avatar = profile_data["avatar"]
+        print(avatar)
         try:
             profile = User.objects.get(user_id=user_id).profile
             img_name = str(avatar)
 
             # save the avatar file to avatar folder
-            save_uploaded_file(avatar, avatar_folder)
+            save_uploaded_file(avatar, avatar_folder, username)
 
             # Put your local file path 
             fileName = os.path.join(avatar_folder, img_name)

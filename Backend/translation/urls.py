@@ -11,7 +11,7 @@ from .views import (
 
 
 urlpatterns = [
-    path("create", CreatePDF.as_view()), # create pdf OK
+    path("create", CreatePDF.as_view(http_method_names=['post'])), # create pdf OK
     path("translation", ProcessTranslation.as_view()), # translate pdf ...
     path('pdf/<str:username>', GetUserPDFs.as_view()), # get pdfs by username OK
     path('gettranslation', GetTranslationData.as_view()), # get translation data by translation_id
