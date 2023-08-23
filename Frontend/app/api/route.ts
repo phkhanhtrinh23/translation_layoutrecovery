@@ -12,22 +12,8 @@ export async function POST(req: Request) {
         method: "POST",
         body: formData,
     });
-
     const data = await res.json()
-
-    const res2 = await fetch(HOST + '/translation', {
-        method: "POST",
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            file_input: data.data.pdf_id,
-            language: "vi"
-        })
-    })
-    const data2 = res2.json();
-    return NextResponse.json(data2);
-
+    return NextResponse.json(data);
 }
 
 export async function GET(req: NextRequest) {

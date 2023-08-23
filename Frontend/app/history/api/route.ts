@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET(req: NextRequest) {
     const res = await fetch(HOST+'/history/'+String(cookies().get("username").value));
     const data = await res.json()
+    console.log(data)
     return NextResponse.json({...data, loggedIn: req.cookies.has("user_id")});
 }
 
