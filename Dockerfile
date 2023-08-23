@@ -1,7 +1,8 @@
 FROM nvidia/cuda:11.1.1-cudnn8-devel-ubuntu20.04
+ARG DEBIAN_FRONTEND=noninteractive
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+RUN apt-get update && apt-get install -y python3 python3-pip cmake wget llvm
+RUN apt-get install -y libglib2.0-0 libsm6 libxext6 libxrender-dev
 
 WORKDIR /translation-app/Backend
 
