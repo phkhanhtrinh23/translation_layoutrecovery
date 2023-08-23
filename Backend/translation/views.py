@@ -273,7 +273,7 @@ class ProcessTranslation(APIView):
                 input_name = str(file_input.file_name)
                 
                 output_name = (
-                    str(file_input.file_name).split(".")[0] + "_translated.pdf"
+                    str(file_input.file_name).split(".")[0] + "_translated_" + str(translation_data["language"]) + ".pdf"
                 )
 
                 # get language
