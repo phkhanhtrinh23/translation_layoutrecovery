@@ -39,7 +39,6 @@ export default function Home() {
             formData.append("file", acceptedFiles[0]);
             formData.append("user_id", Cookies.get("user_id"));
             formData.append("language", "en")
-            console.log(formData);
             fetch(HOST + "/create", {
                 method: "POST",
                 body: formData
