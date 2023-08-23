@@ -66,7 +66,7 @@ export default function Home() {
                     },
                     body: JSON.stringify({
                         file_input: data.data.pdf_id,
-                        language: (isVie ? "vi" : "jp")
+                        language: (isVie ? "vi" : "ja")
                     })
                 }))
                 .then(res => res.json())
@@ -90,7 +90,7 @@ export default function Home() {
                     </div>
                     <div>
                         <span>Choose target language:&nbsp;</span>
-                        <button className="border border-sky-600 text-sky-600 h-fit" onClick={() => setVie(!isVie)}>{isVie ? "VI" : "JP"}</button>
+                        <button className="border border-sky-600 text-sky-600 h-fit" onClick={() => setVie(!isVie)}>{isVie ? "VI" : "JA"}</button>
                     </div>
                 </>}
                 {/* <h1 className="text-center text-5xl text-sky-500">TransLayout</h1> */}
