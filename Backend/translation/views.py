@@ -313,6 +313,7 @@ class ProcessTranslation(APIView):
                     owner_id=file_input.owner_id,
                     file=blob.public_url,
                     language=target_language,
+                    file_name=output_name,
                 )
                 new_pdf.save()
 
