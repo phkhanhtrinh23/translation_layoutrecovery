@@ -3,30 +3,26 @@ import math
 import re
 from pathlib import Path
 from typing import List, Tuple, Union
-from paddleocr import PaddleOCR
 import matplotlib.pyplot as plt
 import numpy as np
 from pdf2image import convert_from_bytes, convert_from_path
 from PIL import Image, ImageDraw, ImageFont
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-from Model.utils.textwrap_japanese import fw_fill_ja
-from Model.utils.textwrap_vietnamese import fw_fill_vi
+from utils import fw_fill_ja, fw_fill_vi
 import torchvision
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
+from torchvision.models.detection import MaskRCNN_ResNet50_FPN_Weights
 from torchvision.transforms import transforms
 import torch
 import random
 import cv2
 import os
 import fitz
-import logging
+import easyocr
 
 from Backend.services.settings import MEDIA_ROOT
-
-logger = logging.getLogger('paddle')
-logger.setLevel(logging.WARN)
 
 seed = 1234
 random.seed(seed)
@@ -45,7 +41,7 @@ CATEGORIES2LABELS = {
 }
 MODEL_PATH = os.path.join(os.getcwd(), "model_196000.pth")
 def get_instance_segmentation_model(num_classes):
-    model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True)
+    model = torchvision.models.detection.maskrcnn_resnet50_fpn(weights=MaskRCNN_ResNet50_FPN_Weights.DEFAULT)
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
     in_features_mask = model.roi_heads.mask_predictor.conv5_mask.in_channels
@@ -65,15 +61,13 @@ class TranslationLayoutRecovery:
     ----------
     font: ImageFont
         Font for drawing text on the image
-    ocr_model: PaddleOCR
+    ocr_model: EasyOCR
         OCR model for detecting text in the text blocks
-    translate_model: MarianMTModel
-        Translation model for translating text
-    translate_tokenizer: MarianTokenizer
-        Tokenizer for the translation model
+    translate_model: Translation model for translating text
+    translate_tokenizer: Tokenizer for the translation model
     """
     DPI = 300
-    FONT_SIZE_VIETNAMESE = 32
+    FONT_SIZE_VIETNAMESE = 34
     FONT_SIZE_JAPANESE = 28
 
     def __init__(self):
@@ -93,7 +87,7 @@ class TranslationLayoutRecovery:
                 return True
         return False
 
-    def translate_pdf(self, input_path: Union[Path, bytes], language: str, output_path: Path, merge: bool) -> None:
+    def _translate_pdf(self, input_path: Union[Path, bytes], language: str, output_path: Path, merge: bool) -> None:
         """Backend function for translating PDF files.
 
         Translation is performed in the following steps:
@@ -123,7 +117,7 @@ class TranslationLayoutRecovery:
         # Batch
         idx = 0
         file_id = 0
-        batch_size = 8
+        batch_size = 4
         for _ in tqdm(range(math.ceil(len(pdf_images)/batch_size))):
             image_list = pdf_images[idx:idx+batch_size]
             if not reached_references:
@@ -155,6 +149,7 @@ class TranslationLayoutRecovery:
                         pdf_files.append(saved_output_path)
                         file_id += 1
             idx += batch_size
+            
         self._merge_pdfs(pdf_files)
 
     def _load_models(self):
@@ -184,10 +179,12 @@ class TranslationLayoutRecovery:
         assert os.path.exists(self.checkpoint_path)
         checkpoint = torch.load(self.checkpoint_path, map_location='cpu')
         self.pub_model.load_state_dict(checkpoint['model'])
+        self.pub_model = self.pub_model.to("cuda")
         self.pub_model.eval()
 
         # Recognition model: PaddleOCR
-        self.ocr_model = PaddleOCR(ocr=True, lang="en", ocr_version="PP-OCRv3")
+        # self.ocr_model = PaddleOCR(ocr=True, use_gpu=True, lang="en", ocr_version="PP-OCRv4")
+        self.ocr_model = easyocr.Reader(['en'], gpu=True)
         
         # Translation model
         self.translate_model_ja = AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-en-jap").to("cuda")
@@ -195,7 +192,7 @@ class TranslationLayoutRecovery:
         
         self.translate_model_vi = AutoModelForSeq2SeqLM.from_pretrained("VietAI/envit5-translation").to("cuda")
         self.translate_tokenizer_vi = AutoTokenizer.from_pretrained("VietAI/envit5-translation")
-        
+
         self.transform = transforms.Compose([
             transforms.ToPILImage(),
             transforms.ToTensor()
@@ -258,7 +255,7 @@ class TranslationLayoutRecovery:
                                     width=int(
                                         (box[2] - box[0]) / (self.FONT_SIZE_JAPANESE / 2)
                                     )
-                                    + 1,
+                                    + 5,
                                 )
                             else:
                                 processed_text = fw_fill_ja(
@@ -266,7 +263,7 @@ class TranslationLayoutRecovery:
                                     width=int(
                                         (box[2] - box[0]) / (self.FONT_SIZE_JAPANESE / 2)
                                     )
-                                    + 1,
+                                    + 5,
                                 )
                         else:
                             if self._repeated_substring(translated_text):
@@ -275,7 +272,7 @@ class TranslationLayoutRecovery:
                                     width=int(
                                         (box[2] - box[0]) / (self.FONT_SIZE_VIETNAMESE / 2)
                                     )
-                                    + 1,
+                                    + 5,
                                 )
                             else:
                                 processed_text = fw_fill_vi(
@@ -283,7 +280,7 @@ class TranslationLayoutRecovery:
                                     width=int(
                                         (box[2] - box[0]) / (self.FONT_SIZE_VIETNAMESE / 2)
                                     )
-                                    + 1,
+                                    + 5,
                                 )
 
                         new_block = Image.new(
@@ -386,7 +383,7 @@ class TranslationLayoutRecovery:
             and whether the references section has been reached.
         """
         results = list(map(self._preprocess_image, image_list))
-        new_list_images, list_original_images = np.array(results)[:,0], np.array(results)[:,1]
+        new_list_images, list_original_images = [row[0] for row in results], [row[1] for row in results]
         with torch.no_grad():
             predictions = self.pub_model(new_list_images)
 
@@ -425,7 +422,7 @@ class TranslationLayoutRecovery:
 
         translated_texts = []
         for i, t in enumerate(texts):
-            http_res = "http" in t
+            http_res = ("http" in t) or ("https" in t)
             if not http_res:
                 if self.language == "ja":
                     inputs = self.translate_tokenizer_ja(t, return_tensors="pt").input_ids.to(
