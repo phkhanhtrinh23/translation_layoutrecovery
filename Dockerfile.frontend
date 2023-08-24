@@ -1,0 +1,22 @@
+# Use an official Node.js runtime as the base image
+FROM node:20.5.1
+# Set the working directory inside the container
+WORKDIR /translation-app-frontend/
+
+RUN apt-get -y update && apt-get install -y nmh
+
+# Copy the package.json and yarn.lock files to the container
+COPY ./Frontend/package.json ./Frontend/yarn.lock .
+
+# Install project dependencies using Yarn
+RUN yarn install && yarn start
+
+# Copy the rest of the application code to the container
+COPY ./Frontend/ .
+
+# Expose the port your application listens on
+EXPOSE 3000
+
+
+# Define the command to run your application in development mode
+# CMD ["yarn", "dev"]
