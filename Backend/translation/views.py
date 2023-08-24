@@ -279,7 +279,7 @@ class ProcessTranslation(APIView):
                     str(file_input.file_name).split(".")[0] + "_translated_" + str(translation_data["language"]) + ".pdf"
                 )
 
-                # upload_output_name
+                random_output_name = str(file_input.file_name).split(".")[0] + "_" + random_number + "_translated_" + str(translation_data["language"]) + ".pdf"
 
                 # get language
                 original_language = file_input.language
@@ -288,7 +288,7 @@ class ProcessTranslation(APIView):
                 # main process...
                 # upload file just saved to firebase storage
                 file_name_input = os.path.join(pdf_folder, input_name)
-                file_name_output = os.path.join(pdf_folder, output_name)
+                file_name_output = os.path.join(pdf_folder, random_output_name)
                 
                 
                 # TODO: process file_output by using AI model and update later...
@@ -304,7 +304,7 @@ class ProcessTranslation(APIView):
                 os.remove(temp_file)
                 
                 bucket = storage.bucket()
-                blob = bucket.blob(output_name)
+                blob = bucket.blob(random_output_name)
                 blob.upload_from_filename(file_name_output)
 
                 # make public access from the URL
