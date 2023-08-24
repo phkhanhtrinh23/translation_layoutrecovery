@@ -58,21 +58,23 @@ def get_instance_segmentation_model(num_classes):
 class TranslationLayoutRecovery:
     """TranslationLayoutRecovery class.
 
-    Attributes
+    Attributes from _load_init()
     ----------
     font: ImageFont
         Font for drawing text on the image
     ocr_model: EasyOCR
         OCR model for detecting text in the text blocks
-    translate_model: Translation model for translating text
-    translate_tokenizer: Tokenizer for the translation model
+    translate_model: 
+        Translation model for translating text
+    translate_tokenizer: 
+        Tokenizer for decoding the output of the translation model
     """
     DPI = 300
     FONT_SIZE_VIETNAMESE = 34
     FONT_SIZE_JAPANESE = 28
 
     def __init__(self):
-        self._load_models()
+        self._load_init()
 
     def _repeated_substring(self, s: str):
         n = len(s)
@@ -144,8 +146,7 @@ class TranslationLayoutRecovery:
                     # convert image to pdf
                     for _, [translated_image, _] in enumerate(image_list):
                         saved_output_path = os.path.join(output_path,f"{file_id:03}.pdf")
-                        color_converted = cv2.cvtColor(translated_image, cv2.COLOR_BGR2RGB)
-                        pil_image = Image.fromarray(color_converted)
+                        pil_image = Image.fromarray(translated_image)
                         pil_image.save(saved_output_path)
                         pdf_files.append(saved_output_path)
                         file_id += 1
@@ -153,7 +154,7 @@ class TranslationLayoutRecovery:
             
         self._merge_pdfs(pdf_files)
 
-    def _load_models(self):
+    def _load_init(self):
         """Backend function for loading models.
 
         Called in the constructor.
@@ -256,7 +257,7 @@ class TranslationLayoutRecovery:
                                     width=int(
                                         (box[2] - box[0]) / (self.FONT_SIZE_JAPANESE / 2)
                                     )
-                                    + 5,
+                                    + 1,
                                 )
                             else:
                                 processed_text = fw_fill_ja(
@@ -264,7 +265,7 @@ class TranslationLayoutRecovery:
                                     width=int(
                                         (box[2] - box[0]) / (self.FONT_SIZE_JAPANESE / 2)
                                     )
-                                    + 5,
+                                    + 1,
                                 )
                         else:
                             if self._repeated_substring(translated_text):
@@ -273,7 +274,7 @@ class TranslationLayoutRecovery:
                                     width=int(
                                         (box[2] - box[0]) / (self.FONT_SIZE_VIETNAMESE / 2)
                                     )
-                                    + 5,
+                                    + 1,
                                 )
                             else:
                                 processed_text = fw_fill_vi(
@@ -281,7 +282,7 @@ class TranslationLayoutRecovery:
                                     width=int(
                                         (box[2] - box[0]) / (self.FONT_SIZE_VIETNAMESE / 2)
                                     )
-                                    + 5,
+                                    + 1,
                                 )
 
                         new_block = Image.new(
@@ -404,10 +405,11 @@ class TranslationLayoutRecovery:
         return list_returned_images, reached_references
 
     def _translate(self, text: str) -> str:
-        """Translate text using the translation model.
+        """Translate the text in PDF files using 
+        the translation model.
 
-        If the text is too long, it will be splited with
-        the heuristic that each sentence should be within 448 characters.
+        If the text is too long, it will be splited by rule-based method
+        so that each sentence should be within 450 characters.
 
         Parameters
         ----------
@@ -419,7 +421,7 @@ class TranslationLayoutRecovery:
         str
             Translated text.
         """
-        texts = self._split_text(text, 448)
+        texts = self._split_text(text, 450)
 
         translated_texts = []
         for i, t in enumerate(texts):
@@ -440,30 +442,30 @@ class TranslationLayoutRecovery:
             else:
                 res = t
             
-            # skip weird translations
+            # skip translated text at first
             if self.language == "ja" and res.startswith("「この版"):
                 continue
 
             translated_texts.append(res)
         return " ".join(translated_texts)
 
-    def _split_text(self, text: str, text_limit: int = 448) -> List[str]:
-        """Split text into chunks of sentences within text_limit.
+    def _split_text(self, text: str, text_limit_length: int = 448) -> List[str]:
+        """Split text into chunks of sentences within text_limit_length.
 
         Parameters
         ----------
         text: str
             Text to be split.
-        text_limit: int
+        text_limit_length: int
             Maximum length of each chunk. Defaults to 448.
 
         Returns
         -------
         List[str]
             List of text chunks,
-            each of which is shorter than text_limit.
+            each of which is shorter than text_limit_length.
         """
-        if len(text) < text_limit:
+        if len(text) < text_limit_length:
             return [text]
 
         sentences = text.rstrip().split(". ")
@@ -471,25 +473,25 @@ class TranslationLayoutRecovery:
         result = []
         current_text = ""
         for sentence in sentences:
-            if len(current_text) + len(sentence) < text_limit:
+            if len(current_text) + len(sentence) < text_limit_length:
                 current_text += sentence
             else:
                 if current_text:
                     result.append(current_text)
-                while len(sentence) >= text_limit:
-                    # better to look for a white space at least?
-                    result.append(sentence[:text_limit - 1])
-                    sentence = sentence[text_limit - 1:].lstrip()
+                while len(sentence) >= text_limit_length:
+                    result.append(sentence[:text_limit_length - 1])
+                    sentence = sentence[text_limit_length - 1:].lstrip()
                 current_text = sentence
         if current_text:
             result.append(current_text)
         return result
 
     def _merge_pdfs(self, pdf_files: List[str]) -> None:
-        """Merge translated PDF files into one file.
+        """Merge the translated PDF files into one file
+        by using fitz
 
-        Merged file will be stored in the temp directory
-        as "translated.pdf".
+        Merged file will be stored in the directory in BACKEND
+        as "fitz_translated.pdf".
 
         Parameters
         ----------
