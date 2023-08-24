@@ -1,8 +1,3 @@
-## To do list
-- [ ] Host db on server using Docker.
-- [ ] Calculate time execution.
-
-
 ### Instruction
 
 0. Put the private files into Backend/ folder (.env and .json files)

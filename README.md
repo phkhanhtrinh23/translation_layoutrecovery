@@ -28,8 +28,8 @@ Translation with Layout Recovery is a cutting-edge approach in the field of natu
 
 ## 3. Technical Overview
 
-- **Frontend:** NextJS, TailwindCSS, NodeJS, Yarn.
-- **Backend:** Django REST Framework.
+- [**Frontend:**](Frontend/README.md) NextJS, TailwindCSS, NodeJS, Yarn.
+- [**Backend:**](Backend/README.md) Django REST Framework.
 - **Database:** PostgreSQL.
 - **Storage:** Firebase Cloud Storage.
 - **Deployment:** Docker (Docker-compose).
