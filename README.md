@@ -34,9 +34,9 @@ Translation with Layout Recovery is a cutting-edge approach in the field of natu
 - **Storage:** Firebase Cloud Storage.
 - **Deployment:** Docker (Docker-compose).
 - **AI Core:**
-   - **NMT:** ...
-   - **Layout Recovery:** ...
-   - **OCR:** ...
+   - **NMT:** envit5-translation.
+   - **Layout Recovery:** MaskRCNN.
+   - **OCR:** EasyOCR.
 ## 4. Repo Structure
 ```
 .
@@ -114,10 +114,11 @@ To use the web app, follow the steps below:
    <img src="images/search.gif">
 
 ## 7. References
-
-- **AutoPrompt** - Taylor Shin, Yasaman Razeghi, Robert L. Logan IV, Eric Wallace, Sameer Singh - [arxiv.org](https://arxiv.org/pdf/2010.15980.pdf)
+- **MaskRCNN** - phamquiluan - [PubLayNet](https://github.com/phamquiluan/PubLayNet)
+- **EasyOCR** - JadedAI - [jaded.ai](https://www.jaided.ai/easyocr/)
 - **envit5-translation** - Chinh Ngo, Trieu H. Trinh, Long Phan, Hieu Tran, Tai Dang, Hieu Nguyen, Minh Nguyen, Minh-Thang Luong - [huggingface.co](https://huggingface.co/VietAI/envit5-translation).
 - **opus-mt-en-jap** - Helsinki-NLP - [huggingface.co](https://huggingface.co/Helsinki-NLP/opus-mt-en-jap).
+- **AutoPrompt** - Taylor Shin, Yasaman Razeghi, Robert L. Logan IV, Eric Wallace, Sameer Singh - [arxiv.org](https://arxiv.org/pdf/2010.15980.pdf)
 - **Guides on using Docker for Python application** - [Docker docs](https://docs.docker.com/language/python/).
 - **Install Docker Engine on Ubuntu** - [Docker docs](https://docs.docker.com/engine/install/ubuntu/).
 
