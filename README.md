@@ -1,6 +1,9 @@
-# 5tasy - Translation with Layout Recovery
+<p align="center">
+  <h1 align="center"> 5tasy</h1>
+  <h4 align="center" style="font-weight: bold; font-style: italic">A web app for Paper Translation with Layout Recovery!</h4>
+</p>
 
-## 0. Contributors
+### Contributors
 
 |            Name               | Profile 
 |----------------|-------------------------------
@@ -13,17 +16,30 @@
 ## 1. Table of Contents
 - [1. Table of Contents](#1-table-of-contents)
 - [2. About The Project](#2-about-the-project)
-- [3. Repo Structure](#3-repo-structure)
-- [4. How to Install](#4-how-to-install)
-- [5. Usage](#5-usage)
-- [6. References](#6-references)
+- [3. Technical Overview](#3-technical-overview)
+- [4. Repo Structure](#4-repo-structure)
+- [5. How to Install](#5-how-to-install)
+- [6. Usage](#6-usage)
+- [7 References](#7-references)
 
 ## 2. About The Project
 
 Translation with Layout Recovery is a cutting-edge approach in the field of natural language processing that goes beyond traditional machine translation methods. While conventional translation models focus solely on converting text from one language to another, **5tasy** takes into account the visual layout and formatting of the text. This approach aims to preserve not only the linguistic content but also the spatial arrangement, font styles, and other visual elements present in the source text.
 
-## 3. Repo Structure
+## 3. Technical Overview
+
+- **Frontend:** NextJS, TailwindCSS, NodeJS, Yarn.
+- **Backend:** Django REST Framework.
+- **Database:** PostgreSQL.
+- **Storage:** Firebase Cloud Storage.
+- **Deployment:** Docker (Docker-compose).
+- **AI Core:**
+   - **NMT:** ...
+   - **Layout Recovery:** ...
+   - **OCR:** ...
+## 4. Repo Structure
 ```
+.
 ├── Backend
 │   ├── account
 │   ├── services
@@ -46,8 +62,8 @@ Translation with Layout Recovery is a cutting-edge approach in the field of natu
     └── main.py
 ```
 
-## 4. How to Install
-To install and run the **5tasy** demo web app, please follow the steps below:
+## 5. How to Install
+To install and run the **5tasy** web app, please follow the steps below:
 
 1. Ensure that Docker is installed on your system. You can download and install Docker from the official website: [Docker Engine for Ubuntu](https://docs.docker.com/engine/install/ubuntu/) or [Docker Desktop](https://www.docker.com/products/docker-desktop/).
 
@@ -69,33 +85,40 @@ To install and run the **5tasy** demo web app, please follow the steps below:
    docker compose up --build
    ```
 
-   **Note:** The first time you run the above command, you will need to be patient :smile:. This process may take up to 30 minutes depending on your internet speed. This is because the process involves downloading libraries (also includes some libraries to run on GPU if available).
-
 5. Wait for the installation process to complete. Once the downloading is done, the web app will be ready to use.
 
-## 5. Usage
+6. To stop the web app, press `Ctrl + C` in the terminal and run the following command:
+
+   ```shell
+   docker compose down
+   ```
+
+## 6. Usage
 To use the web app, follow the steps below:
 
 1. Open your web browser and navigate to [http://localhost:3000](http://localhost:3000).
 
-2. In the web app, you can browse and upload an image using the provided interface.
+2. You first need to register the account and sign in to use the web functions.
    <img src="images/webUI.png">
 
-3. You first need to register the account and sign in to use the web functions.
+3. In the web app, you can browse and upload an English PDF file using the provided interface.
+   <img src="images/webUI.png">
 
-4. You can follow the demo web flow.
-   <img src="images/webFlow.gif">
+4. Click to choose the target language and Hit the **Translate** button to start the translation process.
+   <img src="images/translate.gif">
 
-5. The model will then process your request and provide answers based on the content of the image. The execution time depends on the number of pages in the original file. The more pages you translate, the more time it takes to execute.
+5. The model will then process your file and return the translated PDF file with the same layout as the original one. Hit the `Translated` linklabel or open the `History` bar to view the result. Here you can open to view and download your files.
    <img src="imgs/webResult.gif">
 
-## 6. References
+6. You can also search for your files in the `History` bar by entering the keywords in the search box.
+   <img src="images/search.gif">
+
+## 7. References
 
 - **AutoPrompt** - Taylor Shin, Yasaman Razeghi, Robert L. Logan IV, Eric Wallace, Sameer Singh - [arxiv.org](https://arxiv.org/pdf/2010.15980.pdf)
 - **envit5-translation** - Chinh Ngo, Trieu H. Trinh, Long Phan, Hieu Tran, Tai Dang, Hieu Nguyen, Minh Nguyen, Minh-Thang Luong - [huggingface.co](https://huggingface.co/VietAI/envit5-translation).
 - **opus-mt-en-jap** - Helsinki-NLP - [huggingface.co](https://huggingface.co/Helsinki-NLP/opus-mt-en-jap).
 - **Guides on using Docker for Python application** - [Docker docs](https://docs.docker.com/language/python/).
-- **Django REST API UNIT Testing** - Tafadzwa Lameck Nyamukapa - [Video](https://youtu.be/z6_v1UQ9Ht0).
 - **Install Docker Engine on Ubuntu** - [Docker docs](https://docs.docker.com/engine/install/ubuntu/).
 
 ## Contribution
