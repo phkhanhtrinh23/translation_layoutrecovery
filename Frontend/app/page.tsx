@@ -14,6 +14,7 @@ export default function Home() {
     const [loggedIn, setLoggedIn] = useState(false);
     const [loading, setLoading] = useState(false);
     const [translated, setTranslated] = useState(false);
+    const [status, setStatus] = useState("");
     const [isVie, setVie] = useState(true);
     useEffect(() => {
         fetch("/api")
@@ -35,6 +36,7 @@ export default function Home() {
         try {
             setLoading(true);
             setTranslated(false);
+            setStatus("Creating...")
             const formData = new FormData();
             formData.append("file", acceptedFiles[0]);
             formData.append("user_id", Cookies.get("user_id"));
@@ -43,7 +45,7 @@ export default function Home() {
                 method: "POST",
                 body: formData
             })
-                .then(res => res.json())
+                .then(res => {setStatus("Translating..."); return res.json();})
                 .then(data => fetch(HOST + "/translation", {
                     method: "POST",
                     headers: {
@@ -55,7 +57,7 @@ export default function Home() {
                     })
                 }))
                 .then(res => res.json())
-                .then(data => { toast(data.status); setLoading(false); setTranslated(true) });
+                .then(data => { toast(data.status); setLoading(false); setTranslated(true); setStatus("")});
         } catch (err) { toast("Internal error, try again"); setLoading(false); }
     }
     return (
@@ -70,6 +72,7 @@ export default function Home() {
                     </div>
                     <div className="flex items-center gap-2 mt-2">
                         <button className="bg-sky-400 h-fit" onClick={() => submitFiles()}>Translate</button>
+                        <span>{status}</span>
                         {loading && <ReactLoading type="balls" color="#38BDF8" />}
                         {translated && <Link href="/history" className="hover:text-blue-600 hover:underline px-2">Translated</Link>}
                     </div>

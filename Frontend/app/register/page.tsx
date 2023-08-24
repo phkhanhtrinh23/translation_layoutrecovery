@@ -4,6 +4,7 @@ import Link from "next/link";
 import Navbar from "../components/navbar";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { useRouter } from "next/navigation";
 
 const Register = () => {
     const [userData, setUserData] = useState({
@@ -12,6 +13,7 @@ const Register = () => {
         full_name: "",
         password: ""
     })
+    const router = useRouter();
     const registerUser = async () => {
         try {
             const res = await fetch('/register/api', {
@@ -22,8 +24,18 @@ const Register = () => {
                 body: JSON.stringify(userData)
             });
             const data = await res.json()
-            setUserData({ username: "", email: "", full_name: "", password: "" });
             toast(data.status);
+            console.log(data);
+            if (data.status === "success") {
+                fetch('/login/api', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', },
+                    body: JSON.stringify({username: userData.username, password: userData.password})
+                })
+                    .then(res => res.json())
+                    .then(data => { if (data.status === "Logged in successfully") router.push("/") })
+                    .catch(err => toast("Internal error, try again."))
+            }
         } catch (err) {
             toast("Internal error, try again.");
         }
@@ -51,7 +63,7 @@ const Register = () => {
                     <div className="w-full text-center">
                         <button className="bg-sky-600 w-1/2 mt-4" onClick={() => registerUser()}>Submit</button>
                     </div>
-                    
+
                 </div>
                 <p className="text-center">Have an account? <Link href="/login" className="text-sky-600 font-bold hover:underline">Login!</Link></p>
                 <ToastContainer />
