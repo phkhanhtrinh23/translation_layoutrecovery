@@ -1,4 +1,5 @@
 import os
+import time
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -256,7 +257,7 @@ class UpdateProfile(APIView):
             response_data = {}
             response_data["avatar"] = avatar
             if "https" not in avatar:
-                img_name = str(username) + ".png"
+                img_name = str(username) + str(time.time()) + ".png"
 
                 # save the avatar file to avatar folder
                 fileName = save_uploaded_file(avatar, avatar_folder, username)

@@ -1,4 +1,5 @@
 import os
+import time
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
@@ -115,7 +116,7 @@ def updateOutput(translation_id, user_id, new_pdf_id):
     return False
 
 
-def save_uploaded_file(uploaded_file, destination_path):
+def save_uploaded_file(uploaded_file, pdf_name, destination_path):
     """
     Saves an uploaded file to a specified destination path.
 
@@ -134,7 +135,7 @@ def save_uploaded_file(uploaded_file, destination_path):
     file_content = uploaded_file.read()
 
     # Step 2: Choose a destination path (including filename)
-    full_destination_path = os.path.join(destination_path, uploaded_file.name)
+    full_destination_path = os.path.join(destination_path, pdf_name)
 
     # Step 3: Write content to the file
     with open(full_destination_path, "wb") as destination_file:
@@ -205,9 +206,9 @@ class CreatePDF(APIView):
             language = pdf_data["language"]
 
             # get file name
-            pdf_name = str(file)
+            pdf_name = str(file).split(".")[0] + "_" + str(time.time()).split(".")[0] + ".pdf"
             # save file to pdf folder
-            save_uploaded_file(file, pdf_folder)
+            save_uploaded_file(file, pdf_name, pdf_folder)
             # upload file just saved to firebase storage
             fileName = os.path.join(pdf_folder, pdf_name)
             bucket = storage.bucket()
@@ -223,7 +224,7 @@ class CreatePDF(APIView):
             if User.objects.filter(user_id=user_id).exists():
                 current_data = {}
                 current_data["owner_id"] = user_id
-                current_data["file_name"] = pdf_name
+                current_data["file_name"] = str(file)
                 current_data["file"] = blob.public_url
                 current_data["language"] = language
                 print(len(str(current_data["file"])))
@@ -269,12 +270,16 @@ class ProcessTranslation(APIView):
             if PDF.objects.filter(pdf_id=translation_data["file_input"]).exists():
                 file_input = PDF.objects.get(pdf_id=translation_data["file_input"])
 
+                # get the random number of file
+                random_number = str(file_input.file).split("/")[-1].split("_")[-1].split(".")[0]
                 # get file name
-                input_name = str(file_input.file_name)
+                input_name = str(file_input.file_name).split(".")[0] + "_" + random_number + ".pdf"
                 
                 output_name = (
                     str(file_input.file_name).split(".")[0] + "_translated_" + str(translation_data["language"]) + ".pdf"
                 )
+
+                # upload_output_name
 
                 # get language
                 original_language = file_input.language
