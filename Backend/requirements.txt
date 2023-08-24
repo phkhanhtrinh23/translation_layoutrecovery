@@ -24,3 +24,6 @@ torchaudio==0.12.1+cu113
 # fitz
 frontend
 numpy==1.23
+easyocr
+Pillow==9.5.0
+sacremoses
