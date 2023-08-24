@@ -84,7 +84,7 @@ export default function Home() {
                 <div className="flex gap-8 md:flex-row flex-col">
                     <div>
                         <h2 className="my-2">Introduction</h2>
-                        <p>This website ensures accurate translations from English to Vietnamese/Japanese and maintains the original file layouts.
+                        <p>This website ensures accurate translations from English papers to Vietnamese/Japanese and maintains the original file layouts.
                         </p>
                         <h2 className="my-2">Technology</h2>
                         <p>The core of our app is Neural Machine Translation (NMT) and Optical Character Recognition (OCR) technologies. envit5, Helsinki-NLP/opus-mt-en-jap, and EasyOCR model are integrated for unparalleled results. This harmonization heightens translation accuracy and extends capabilities to image-based text, revolutionizing comprehension.
