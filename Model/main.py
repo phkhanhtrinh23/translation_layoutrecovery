@@ -147,6 +147,7 @@ class TranslationLayoutRecovery:
                     for _, [translated_image, _] in enumerate(image_list):
                         saved_output_path = os.path.join(output_path,f"{file_id:03}.pdf")
                         pil_image = Image.fromarray(translated_image)
+                        pil_image = pil_image.convert("RGB")
                         pil_image.save(saved_output_path)
                         pdf_files.append(saved_output_path)
                         file_id += 1
