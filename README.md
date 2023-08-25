@@ -78,6 +78,7 @@ To install and run the **5tasy** web app, please follow the steps below:
    ```shell
    cd translation_layoutrecovery
    ```
+   **Important:** Then, put the necessary environment files (.env) in this folder.
 
 4. Build the Docker image and run the container using the following command:
 
