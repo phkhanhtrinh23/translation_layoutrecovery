@@ -42,6 +42,15 @@ CATEGORIES2LABELS = {
 }
 MODEL_PATH = os.path.join(os.getcwd(), "model_196000.pth")
 def get_instance_segmentation_model(num_classes):
+    '''
+    This function returns a Mask R-CNN model with a ResNet-50-FPN backbone.
+    The model is pretrained on the PubLayNet dataset. 
+    -----
+    Input:
+        num_classes: number of classes
+    Output:
+        model: Mask R-CNN model with a ResNet-50-FPN backbone
+    '''
     model = torchvision.models.detection.maskrcnn_resnet50_fpn(weights=MaskRCNN_ResNet50_FPN_Weights.DEFAULT)
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
