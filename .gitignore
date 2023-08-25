@@ -165,7 +165,7 @@ ngrok.exe
 *firebase-adminsdk*
 
 database/
-.env*
+.env.db
 migrations/
 ngrok.yml
 *.pth
