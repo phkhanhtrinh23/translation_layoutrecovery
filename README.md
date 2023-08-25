@@ -24,7 +24,7 @@
 
 ## 2. About The Project
 
-Translation with Layout Recovery is a cutting-edge approach in the field of natural language processing that goes beyond traditional machine translation methods. While conventional translation models focus solely on converting text from one language to another, **5tasy** takes into account the visual layout and formatting of the text. This approach aims to preserve not only the linguistic content but also the spatial arrangement, font styles, and other visual elements present in the source text. Some detailed information can be found in this [slide](https://docs.google.com/presentation/d/1IOHW8mOv6rhgAigjeedIoWsYYqIYTFzWO7hn6JeU7mw/edit?usp=sharing)
+Translation with Layout Recovery is a cutting-edge approach in the field of natural language processing that goes beyond traditional machine translation methods. While conventional translation models focus solely on converting text from one language to another, **5tasy** takes into account the visual layout and formatting of the text. This approach aims to preserve not only the linguistic content but also the spatial arrangement, font styles, and other visual elements present in the source text. Some detailed information can be found in this [slide](https://docs.google.com/presentation/d/1IOHW8mOv6rhgAigjeedIoWsYYqIYTFzWO7hn6JeU7mw/edit?usp=sharing).
 
 ## 3. Technical Overview
 
