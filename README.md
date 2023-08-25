@@ -99,19 +99,23 @@ To use the web app, follow the steps below:
 1. Open your web browser and navigate to [http://localhost:3000](http://localhost:3000).
 
 2. You first need to register the account and sign in to use the web functions.
-   <img src="images/webUI.png">
+   <div class="row">
+      <div class="column">
+         <img src="assets/images/login.png" width="49%">
+         <img src="assets/images/register.png" width="49%">
+      </div>
+   </div>
 
 3. In the web app, you can browse and upload an English PDF file using the provided interface.
-   <img src="images/webUI.png">
 
 4. Click to choose the target language and Hit the **Translate** button to start the translation process.
-   <img src="images/translate.gif">
+   <img src="assets/gifs/translate.gif">
 
 5. The model will then process your file and return the translated PDF file with the same layout as the original one. Hit the `Translated` linklabel or open the `History` bar to view the result. Here you can open to view and download your files.
-   <img src="imgs/webResult.gif">
+   <img src="assets/gifs/viewhistory.gif">
 
 6. You can also search for your files in the `History` bar by entering the keywords in the search box.
-   <img src="images/search.gif">
+   <img src="assets/gifs/searchfile.gif">
 
 ## 7. References
 - **MaskRCNN** - phamquiluan - [PubLayNet](https://github.com/phamquiluan/PubLayNet)
