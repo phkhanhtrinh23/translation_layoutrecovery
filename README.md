@@ -4,11 +4,10 @@
 </p>
 
 ### Contributors
-
 |            Name               | Profile 
 |----------------|-------------------------------
-|Nguyễn Bảo Tín | [@nbtin](https://github.com/nbtin)            
-|Phạm Khánh Trình | [@phkhanhtrinh23](https://github.com/phkhanhtrinh23)           
+|Phạm Khánh Trình | [@phkhanhtrinh23](https://github.com/phkhanhtrinh23)
+|Nguyễn Bảo Tín | [@nbtin](https://github.com/nbtin)
 |Yang Tuấn Anh | [@YangTuanAnh](https://github.com/YangTuanAnh)
 |Nguyễn Hoàng Ngọc Hà | [@ngochafromdn](https://github.com/ngochafromdn)
 |Nguyễn Minh Lý | [@lynguyenminh](https://github.com/lynguyenminh)
@@ -37,6 +36,7 @@ Translation with Layout Recovery is a cutting-edge approach in the field of natu
    - **NMT:** envit5-translation.
    - **Layout Recovery:** MaskRCNN.
    - **OCR:** EasyOCR.
+   - **Spelling Correction (Japanese)**: [GECToR-JSC](https://github.com/phkhanhtrinh23/gector_jsc)
 ## 4. Repo Structure
 ```
 .
@@ -123,7 +123,7 @@ To use the web app, follow the steps below:
 - **EasyOCR** - JadedAI - [jaded.ai](https://www.jaided.ai/easyocr/)
 - **envit5-translation** - Chinh Ngo, Trieu H. Trinh, Long Phan, Hieu Tran, Tai Dang, Hieu Nguyen, Minh Nguyen, Minh-Thang Luong - [huggingface.co](https://huggingface.co/VietAI/envit5-translation).
 - **opus-mt-en-jap** - Helsinki-NLP - [huggingface.co](https://huggingface.co/Helsinki-NLP/opus-mt-en-jap).
-- **AutoPrompt** - Taylor Shin, Yasaman Razeghi, Robert L. Logan IV, Eric Wallace, Sameer Singh - [arxiv.org](https://arxiv.org/pdf/2010.15980.pdf)
+- **GECToR** - Kostiantyn Omelianchuk, Vitaliy Atrasevych, Artem Chernodub, Oleksandr Skurzhanskyi - [aclanthology.org](https://aclanthology.org/2020.bea-1.16/)
 - **Guides on using Docker for Python application** - [Docker docs](https://docs.docker.com/language/python/).
 - **Install Docker Engine on Ubuntu** - [Docker docs](https://docs.docker.com/engine/install/ubuntu/).
 
