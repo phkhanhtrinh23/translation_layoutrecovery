@@ -36,7 +36,7 @@ Translation with Layout Recovery is a cutting-edge approach in the field of natu
    - **NMT:** envit5-translation.
    - **Layout Recovery:** MaskRCNN.
    - **OCR:** EasyOCR.
-   - **Spelling Correction (Japanese)**: [GECToR-JSC](https://github.com/phkhanhtrinh23/gector_jsc)
+   - **Spelling Correction (Japanese)**: [JGEC](https://github.com/phkhanhtrinh23/JGEC)
 ## 4. Repo Structure
 ```
 .
