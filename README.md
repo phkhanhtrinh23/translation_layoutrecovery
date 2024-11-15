@@ -136,3 +136,6 @@ Contributions are what make GitHub such an amazing place to be learn, inspire, a
 3. Commit your changes: `git commit -m 'add your messages'`
 4. Push to the branch: `git push origin contribute/Contribute`
 5. Open a pull request
+
+## Star History Chart
+[![Star History Chart](https://api.star-history.com/svg?repos=phkhanhtrinh23/translation_layoutrecovery&type=Date)](https://star-history.com/#phkhanhtrinh23/translation_layoutrecovery&Date)
